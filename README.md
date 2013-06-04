@@ -20,6 +20,8 @@ task ID, which will be used to retrieve the task data.
 
 ### Task Channel ###
 
+Note: this will not be implemented in the first pass.
+
 There is a Pub/Sub `Channel` for each task queue (channel). This can
 be used by the worker client to listen for new tasks if the task queue
 they were interested in was empty when they last checked for a task.
@@ -53,9 +55,13 @@ Current fields are
 
 * `worker`
 
-	The worker ID and the PID of the worker process on that worker,
-    separated by a space. Will not be set if the task has not been
-    started yet.
+	The worker ID of the worker running the task. Will not be set if
+    the task has not been started yet.
+
+* `pid`
+
+	The PID of the process running the task on the worker. Will not be
+    set if the task has not been started yet.
 
 * `error`
 
@@ -100,13 +106,17 @@ off the task queue it is interested in.
 ### Worker Task Pop ###
 
 Workers should pop a task off the queue and then set the status of the
-task to `started`, ideally as an atomic transaction (might need to be
-done via a Lua script).
+task to `started`, and set the `worker` and `pid` fields of the task,
+ideally as an atomic transaction (might need to be done via a Lua
+script).
 
 If a worker ever attempts to pop a task off the queue, and there is no
 task, it should subscribe to the queue's pub/sub channel.
 
 ### Task Queue Channel Message ###
+
+Note: We will not implement this in the first pass. Workers will just
+poll once every few seconds.
 
 If a worker receives a message via a Pub/Sub channel that a queue has
 a task in it, it should try to atomically pop a task off that channel
