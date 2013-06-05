@@ -5,18 +5,45 @@
 A simple task queue system optimized for very long running
 tasks.
 
+## Terminology ##
+
+* *Queue*
+
+	A list of tasks, of a given type, to be run. Multiple *queues* may
+    be used to execute different types of tasks on different *nodes*.
+
+* *Task*
+
+	A piece of work to be done, including its parameters, current
+    status, result (if done), etc.
+
+* *Node*
+
+	A computer running tasks from the queue.
+
+* *Process*
+
+	A process, running on a *node*, executing a *task*.
+
 ## Data Storage ##
 
 Currently, the backend structure is Redis. Keys should probably be
-prefixed with a namespace, i.e. "bluequeue_foo", so that other systems
-can use the Redis DB for other things.
+prefixed with a namespace, i.e. named "bluequeue_foo", so that other
+systems can use the Redis DB for other things.
 
 ### Task Queue ###
 
 Stored in a `List`, accessed as a queue: new tasks are added via
-`RPUSH`, tasks are removed for execution via `LPOP`. There is a `List`
+`LPUSH`, tasks are removed for execution via `RPOP`. There is a `List`
 for each task queue (channel). All that is stored in the `List` is a
 task ID, which will be used to retrieve the task data.
+
+### Node Task List ###
+
+Stored in a `List`, this is used to keep track of which nodes are
+running which tasks. Tasks should be atomically moved from the *Task
+Queue* to the *Node Task List* via `RPOPLPUSH`, so that they don't get
+lost.
 
 ### Task Channel ###
 
@@ -40,7 +67,12 @@ Current fields are
 
 * `status`
 
-	One of: `pending`, `started`, `succeeded` or `failed`.
+	One of: `pending`, `reserved`, `started`, `complete` or `failed`.
+
+* `queue`
+
+	The queue that the task is in (mostly just for debugging
+    purposes).
 
 * `parameters`
 
@@ -53,14 +85,14 @@ Current fields are
     function; totally task-specific. Will not be set if the task
     hasn't completed yet.
 
-* `worker`
+* `node`
 
-	The worker ID of the worker running the task. Will not be set if
-    the task has not been started yet.
+	The node ID of the node running the task. Will not be set if the
+    task has not been started yet.
 
 * `pid`
 
-	The PID of the process running the task on the worker. Will not be
+	The PID of the process running the task on the node. Will not be
     set if the task has not been started yet.
 
 * `error`
@@ -70,19 +102,16 @@ Current fields are
 
 	TODO: Determine basic structure of this field.
 
-### Workers ###
+### Nodes ###
 
 In order for the system to be easily introspected, the currently
-active workers will be stored in Redis. Each will be stored as a
-simple string, where the key is built from the ID of the worker
-(i.e. "bluequeue_worker_NNNN") and the value is a JSON serialized
-description of the worker.
+active nodes will be stored in a Redis `Set`.
 
-TODO: should the "ID" be the hostname or IP address of the worker, so
+TODO: should the "ID" be the hostname or IP address of the node, so
 that they are more easily identified?
 
-TODO: should workers be required to post a "heartbeat" back to their
-worker key? If so, we could monitor that they are alive, but we would
+TODO: should nodes be required to post a "heartbeat" back to their
+node key? If so, we could monitor that they are alive, but we would
 need to decide how they post back: would the worker function be
 responsible for posting back while it is running?
 
@@ -92,26 +121,41 @@ Tasks are executed via this workflow.
 
 ### Submission ###
 
-Tasks are submitted by creating a Task record, with a UUID, a
-status of `pending` and whatever `parameters` were specified, and
-appending the task ID to appropriate channel via `RPUSH`. These
-operations should be atomically executed via a `Transaction`.
+Tasks should be submitted by creating a UUID, [TID], JSON encoding the
+parameters, [PARAMS], and then executing:
 
-### Worker Start ###
+```
+MULTI
+HMSET [TID] status pending queue [QUEUE] parameters [PARAMS]
+LPUSH [QUEUE] [TID]
+EXEC
+```
 
-When a Worker starts, it should create a `Worker` record of itself,
-filling in the appropriate data. It should then attempt to pull a task
-off the task queue it is interested in.
+### Node Task Pop ###
 
-### Worker Task Pop ###
+Nodes should pop a task off the queue and then set the status of the
+task to `started`, and set the `worker` field of the task.
 
-Workers should pop a task off the queue and then set the status of the
-task to `started`, and set the `worker` and `pid` fields of the task,
-ideally as an atomic transaction (might need to be done via a Lua
-script).
+If no task is popped off the queue, the Node should wait for a new
+task notification. Ideally, this will be via Pub/Sub, but, at first,
+we can do it by polling.
 
-If a worker ever attempts to pop a task off the queue, and there is no
-task, it should subscribe to the queue's pub/sub channel.
+Tasks are popped using the following commands.
+
+```
+RPOPLPUSH [QUEUE] [NODE TASKS]
+```
+
+```
+HMSET [TID] status reserved worker [NODE]
+```
+
+Note that these two commands cannot be executed atomically because the
+second depends on the first, and, even with Lua scripting, that cannot
+be done atomically and safely. Therefore, there is a chance that a
+task is popped off the pending queue, but its record is not
+updated. This can be detected if a task is in a node's queue, but has
+a status of `pending`.
 
 ### Task Queue Channel Message ###
 
@@ -124,11 +168,36 @@ a task in it, it should try to atomically pop a task off that channel
 channel; if it does not (i.e. another worker got the task) it should
 remain subscribed.
 
+### Task Started ###
+
+When a process starts executing a task on a node, it should update the
+task to indicate that, and also add itself to a set of all active
+tasks:
+
+```
+MULTI
+SADD running_tasks "[NODE ID] [PID] [TASK ID]"
+HMSET [TASK ID] status started pid [PID]
+EXEC
+```
+
+Note that this assumes that the process is told what task to execute,
+rather than pulling it off the node's task list.
+
 ### Task Completed Successfully ###
 
 If a task completes successfully, it should set the `status` field of
 the task to `succeeded` and set the `result` field to the
 JSON-serialized result of the task, as a single atomic transaction.
+
+```
+MULTI
+LREM [WORKER QUEUE] [TASK ID]
+LREM running_tasks 1 "[NODE ID] [PID] [TASK ID]"
+HMSET [TASK ID] status complete result [RESULT]
+LPUSH complete [TASK ID]
+EXEC
+```
 
 ### Task Failed ###
 
@@ -137,3 +206,12 @@ or some monitoring process determines that the worker fails more
 catastrophically), the process that detects the error should set the
 `status` field of the task to `failed` and the `error` field to a
 JSON-serialized description of the error (see above).
+
+```
+MULTI
+LREM [WORKER QUEUE] [TASK ID]
+LREM running_tasks 1 "[NODE ID] [PID] [TASK ID]"
+HMSET [TASK ID] status failed error [ERROR]
+LPUSH failed [TASK ID]
+EXEC
+```
