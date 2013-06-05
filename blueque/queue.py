@@ -24,3 +24,10 @@ class Queue(object):
             pipeline.lpush(self.name, task_id)
 
         return task_id
+
+    def dequeue(self, node_id):
+        task_id = self.redis.rpoplpush(self.name, node_id)
+
+        self.redis.hmset(task_id, {"status": "reserved", "node": "some_node"})
+
+        return task_id
