@@ -147,7 +147,7 @@ RPOPLPUSH [QUEUE] [NODE TASKS]
 ```
 
 ```
-HMSET [TID] status reserved worker [NODE]
+HMSET [TID] status reserved node [NODE]
 ```
 
 Note that these two commands cannot be executed atomically because the
