@@ -8,6 +8,9 @@ class Queue(object):
         self.name = name
         self.redis = redis.StrictRedis(host="", port=1234, db=0)
 
+    def _running_job(self, node_id, pid, task_id):
+        return " ".join((node_id, str(pid), task_id))
+
     def enqueue(self, parameters):
         task_id = uuid.uuid4()
         encoded_params = json.dumps(parameters)
@@ -35,10 +38,21 @@ class Queue(object):
 
     def start(self, task_id, node_id, pid):
         with self.redis.pipeline() as pipeline:
-            pipeline.sadd("running_tasks", " ".join((node_id, str(pid), task_id)))
+            pipeline.sadd("running_tasks", self._running_job(node_id, pid, task_id))
             pipeline.hmset(task_id, {"status": "started", "pid": pid})
             pipeline.hget(task_id, "parameters")
 
             results = pipeline.execute()
 
             return json.loads(results[-1])
+
+    def complete(self, task_id, node_id, pid, result):
+        with self.redis.pipeline() as pipeline:
+            pipeline.lrem(node_id, task_id)
+            pipeline.lrem("running_tasks", 1, self._running_job(node_id, pid, task_id))
+
+            pipeline.hmset(task_id, {"status": "complete", "result": json.dumps(result)})
+
+            pipeline.lpush("complete", task_id)
+
+            pipeline.execute()

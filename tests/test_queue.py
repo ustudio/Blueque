@@ -66,3 +66,19 @@ class TestQueue(unittest.TestCase):
         pipeline.hget.assert_called_with("some_task", "parameters")
 
         pipeline.execute.assert_called_with()
+
+    def test_complete_task(self):
+        pipeline = self._get_pipeline()
+
+        self.queue.complete("some_task", "some_node", 1234, {"a": "result"})
+
+        pipeline.lrem.assert_has_calls([
+            mock.call("some_node", "some_task"),
+            mock.call("running_tasks", 1, "some_node 1234 some_task")])
+
+        pipeline.hmset.assert_called_with(
+            "some_task", {"status": "complete", "result": json.dumps({"a": "result"})})
+
+        pipeline.lpush.assert_called_with("complete", "some_task")
+
+        pipeline.execute.assert_called_with()
