@@ -21,9 +21,14 @@ tasks.
 
 	A computer running tasks from the queue.
 
+* *Listener*
+
+	A process running on a node, listening for new tasks on a single queue.
+
 * *Process*
 
-	A process, running on a *node*, executing a *task*.
+	A process, running on a *node*, created by a *listener*, executing
+    a *task*.
 
 ## Data Storage ##
 
@@ -33,12 +38,16 @@ systems can use the Redis DB for other things.
 
 ### Task Queue ###
 
+`blueque_pending_tasks_[queue name]`
+
 Stored in a `List`, accessed as a queue: new tasks are added via
 `LPUSH`, tasks are removed for execution via `RPOP`. There is a `List`
 for each task queue (channel). All that is stored in the `List` is a
 task ID, which will be used to retrieve the task data.
 
 ### Node Task List ###
+
+`blueque_reserved_tasks_[queue name]_[node name]`
 
 Stored in a `List`, this is used to keep track of which nodes are
 running which tasks. Tasks should be atomically moved from the *Task
@@ -57,7 +66,16 @@ Messages should *not* include the task ID of the newly created task,
 because workers must be required to manually try to `LPOP` the task
 off the task queue, so that only one work runs each task.
 
+### Task List ###
+
+`blueque_tasks_[queue name]`
+
+There is a list of all the tasks in a queue, regardless of their
+state. This is mostly used for introspection/management purposes.
+
 ### Task Data ###
+
+`blueque_task_[task id]`
 
 The actual data associated with a task will be stored as a hash, where
 the key is built from the task ID (i.e. "bluequeue_task_NNNN"). Each
@@ -114,6 +132,18 @@ TODO: should nodes be required to post a "heartbeat" back to their
 node key? If so, we could monitor that they are alive, but we would
 need to decide how they post back: would the worker function be
 responsible for posting back while it is running?
+
+### Queues ###
+
+`blueque_queues`
+
+There is a `Sorted Set` containing the names of all the queues, where
+the score of the set is the number of nodes listening to that set.
+
+When a node comes online, it increments the score by 1; when a node
+goes offline (cleanly) it increments the score by -1. Every time a
+task is enqueued, the score should be incremented by 0, so that a
+queue with tasks, but no listeners, still shows up in the set.
 
 ## Task Workflow ##
 
