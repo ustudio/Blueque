@@ -49,7 +49,7 @@ class Queue(object):
     def complete(self, task_id, node_id, pid, result):
         with self.redis.pipeline() as pipeline:
             pipeline.lrem(node_id, task_id)
-            pipeline.lrem("running_tasks", 1, self._running_job(node_id, pid, task_id))
+            pipeline.srem("running_tasks", 1, self._running_job(node_id, pid, task_id))
 
             pipeline.hmset(task_id, {"status": "complete", "result": json.dumps(result)})
 
@@ -60,7 +60,7 @@ class Queue(object):
     def fail(self, task_id, node_id, pid, error):
         with self.redis.pipeline() as pipeline:
             pipeline.lrem(node_id, task_id)
-            pipeline.lrem("running_tasks", 1, self._running_job(node_id, pid, task_id))
+            pipeline.srem("running_tasks", 1, self._running_job(node_id, pid, task_id))
 
             pipeline.hmset(task_id, {"status": "failed", "error": json.dumps(error)})
 

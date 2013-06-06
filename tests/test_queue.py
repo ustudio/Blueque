@@ -72,9 +72,8 @@ class TestQueue(unittest.TestCase):
 
         self.queue.complete("some_task", "some_node", 1234, {"a": "result"})
 
-        pipeline.lrem.assert_has_calls([
-            mock.call("some_node", "some_task"),
-            mock.call("running_tasks", 1, "some_node 1234 some_task")])
+        pipeline.lrem.assert_called_with("some_node", "some_task")
+        pipeline.srem.assert_called_with("running_tasks", 1, "some_node 1234 some_task")
 
         pipeline.hmset.assert_called_with(
             "some_task", {"status": "complete", "result": json.dumps({"a": "result"})})
@@ -88,9 +87,8 @@ class TestQueue(unittest.TestCase):
 
         self.queue.fail("some_task", "some_node", 1234, {"error": "failed"})
 
-        pipeline.lrem.assert_has_calls([
-            mock.call("some_node", "some_task"),
-            mock.call("running_tasks", 1, "some_node 1234 some_task")])
+        pipeline.lrem.assert_called_with("some_node", "some_task")
+        pipeline.srem.assert_called_with("running_tasks", 1, "some_node 1234 some_task")
 
         pipeline.hmset.assert_called_with(
             "some_task", {"status": "failed", "error": json.dumps({"error": "failed"})})
