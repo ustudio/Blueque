@@ -55,8 +55,14 @@ class TestQueue(unittest.TestCase):
     def test_start_task(self):
         pipeline = self._get_pipeline()
 
-        self.queue.start("some_task", "some_node", 4321)
+        pipeline.execute.return_value = [1, True, json.dumps({"some": "parameter"})]
+
+        parameters = self.queue.start("some_task", "some_node", 4321)
+
+        self.assertEqual({"some": "parameter"}, parameters)
 
         pipeline.sadd.assert_called_with("running_tasks", "some_node 4321 some_task")
         pipeline.hmset.assert_called_with("some_task", {"status": "started", "pid": 4321})
+        pipeline.hget.assert_called_with("some_task", "parameters")
+
         pipeline.execute.assert_called_with()

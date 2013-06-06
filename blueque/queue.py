@@ -37,5 +37,8 @@ class Queue(object):
         with self.redis.pipeline() as pipeline:
             pipeline.sadd("running_tasks", " ".join((node_id, str(pid), task_id)))
             pipeline.hmset(task_id, {"status": "started", "pid": pid})
+            pipeline.hget(task_id, "parameters")
 
-            pipeline.execute()
+            results = pipeline.execute()
+
+            return json.loads(results[-1])
