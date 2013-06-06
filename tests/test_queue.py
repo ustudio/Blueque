@@ -50,3 +50,11 @@ class TestQueue(unittest.TestCase):
 
         mock_client.rpoplpush.assert_called_with("some.queue", "some_node")
         mock_client.hmset.assert_called_with("1234", {"status": "reserved", "node": "some_node"})
+
+    def test_start_task(self):
+        pipeline = self._get_pipeline()
+
+        self.queue.start("some_task", "some_node", 4321)
+
+        pipeline.sadd.assert_called_with("running_tasks", "some_node 4321 some_task")
+        pipeline.hmset.assert_called_with("some_task", {"status": "started", "pid": 4321})

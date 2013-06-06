@@ -31,3 +31,9 @@ class Queue(object):
         self.redis.hmset(task_id, {"status": "reserved", "node": "some_node"})
 
         return task_id
+
+    def start(self, task_id, node_id, pid):
+        with self.redis.pipeline() as pipeline:
+            pipeline.sadd("running_tasks", " ".join((node_id, str(pid), task_id)))
+
+            pipeline.hmset(task_id, {"status": "started", "pid": pid})
