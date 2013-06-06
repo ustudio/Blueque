@@ -20,8 +20,9 @@ class Queue(object):
                     "queue": self.name,
                     "parameters": encoded_params
                 })
-
             pipeline.lpush(self.name, task_id)
+
+            pipeline.execute()
 
         return task_id
 
@@ -35,5 +36,6 @@ class Queue(object):
     def start(self, task_id, node_id, pid):
         with self.redis.pipeline() as pipeline:
             pipeline.sadd("running_tasks", " ".join((node_id, str(pid), task_id)))
-
             pipeline.hmset(task_id, {"status": "started", "pid": pid})
+
+            pipeline.execute()

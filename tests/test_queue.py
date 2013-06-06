@@ -38,6 +38,7 @@ class TestQueue(unittest.TestCase):
             })
 
         pipeline.lpush.assert_called_with("some.queue", "1234567890")
+        pipeline.execute.assert_called_with()
 
     def test_dequeue(self):
         mock_client = self.mock_redis.return_value
@@ -58,3 +59,4 @@ class TestQueue(unittest.TestCase):
 
         pipeline.sadd.assert_called_with("running_tasks", "some_node 4321 some_task")
         pipeline.hmset.assert_called_with("some_task", {"status": "started", "pid": 4321})
+        pipeline.execute.assert_called_with()
