@@ -59,11 +59,11 @@ lost.
 Note: this will not be implemented in the first pass.
 
 There is a Pub/Sub `Channel` for each task queue (channel). This can
-be used by the worker client to listen for new tasks if the task queue
+be used by the listener client to listen for new tasks if the task queue
 they were interested in was empty when they last checked for a task.
 
 Messages should *not* include the task ID of the newly created task,
-because workers must be required to manually try to `LPOP` the task
+because listeners must be required to manually try to `LPOP` the task
 off the task queue, so that only one work runs each task.
 
 ### Task List ###
@@ -94,12 +94,12 @@ Current fields are
 
 * `parameters`
 
-	JSON serialized parameters which will be passed to the worker
+	JSON serialized parameters which will be passed to the process
     function; totally task-specific.
 
 * `result`
 
-	JSON serialized result of the task, as returned by the worker
+	JSON serialized result of the task, as returned by the process
     function; totally task-specific. Will not be set if the task
     hasn't completed yet.
 
@@ -132,7 +132,7 @@ that they are more easily identified?
 
 TODO: should nodes be required to post a "heartbeat" back to their
 node key? If so, we could monitor that they are alive, but we would
-need to decide how they post back: would the worker function be
+need to decide how they post back: would the process function be
 responsible for posting back while it is running?
 
 ### Queues ###
@@ -158,15 +158,16 @@ parameters, [PARAMS], and then executing:
 
 ```
 MULTI
-HMSET [TID] status pending queue [QUEUE] parameters [PARAMS]
-LPUSH [QUEUE] [TID]
+HMSET blueque_task_[TASK ID] status pending queue [QUEUE] parameters [PARAMS]
+ZINCRBY blueque_queues 0 [QUEUE]
+LPUSH blueque_pending_tasks_[QUEUE] [TASK ID]
 EXEC
 ```
 
 ### Node Task Pop ###
 
 Nodes should pop a task off the queue and then set the status of the
-task to `started`, and set the `worker` field of the task.
+task to `started`, and set the `node` field of the task.
 
 If no task is popped off the queue, the Node should wait for a new
 task notification. Ideally, this will be via Pub/Sub, but, at first,
@@ -175,11 +176,11 @@ we can do it by polling.
 Tasks are popped using the following commands.
 
 ```
-RPOPLPUSH [QUEUE] [NODE TASKS]
+RPOPLPUSH blueque_pending_tasks_[QUEUE] [NODE TASKS]
 ```
 
 ```
-HMSET [TID] status reserved node [NODE]
+HMSET blueque_task_[TASK ID] status reserved node [NODE]
 ```
 
 Note that these two commands cannot be executed atomically because the
@@ -191,13 +192,13 @@ a status of `pending`.
 
 ### Task Queue Channel Message ###
 
-Note: We will not implement this in the first pass. Workers will just
+Note: We will not implement this in the first pass. Listeners will just
 poll once every few seconds.
 
-If a worker receives a message via a Pub/Sub channel that a queue has
+If a listener receives a message via a Pub/Sub channel that a queue has
 a task in it, it should try to atomically pop a task off that channel
 (see above). If it does get a task, it should unsubscribe from the
-channel; if it does not (i.e. another worker got the task) it should
+channel; if it does not (i.e. another listener got the task) it should
 remain subscribed.
 
 ### Task Started ###
@@ -208,8 +209,9 @@ tasks:
 
 ```
 MULTI
-SADD running_tasks "[NODE ID] [PID] [TASK ID]"
-HMSET [TASK ID] status started pid [PID]
+SADD blueque_started_tasks_[QUEUE] "[NODE ID] [PID] [TASK ID]"
+HMSET blueque_task_[TASK ID] status started pid [PID]
+HGET blueque_task_[TASK ID] parameters
 EXEC
 ```
 
@@ -224,26 +226,26 @@ JSON-serialized result of the task, as a single atomic transaction.
 
 ```
 MULTI
-LREM [WORKER QUEUE] [TASK ID]
-LREM running_tasks 1 "[NODE ID] [PID] [TASK ID]"
-HMSET [TASK ID] status complete result [RESULT]
-LPUSH complete [TASK ID]
+LREM blueque_reserved_tasks_[QUEUE]_[NODE ID] [TASK ID]
+LREM blueque_started_tasks_[QUEUE] 1 "[NODE ID] [PID] [TASK ID]"
+HMSET blueque_task_[TASK ID] status complete result [RESULT]
+LPUSH blueque_complete_tasks_[QUEUE] [TASK ID]
 EXEC
 ```
 
 ### Task Failed ###
 
-If a task fails for any reason (worker function raises an exception,
-or some monitoring process determines that the worker fails more
+If a task fails for any reason (process function raises an exception,
+or some monitoring process determines that the process fails more
 catastrophically), the process that detects the error should set the
 `status` field of the task to `failed` and the `error` field to a
 JSON-serialized description of the error (see above).
 
 ```
 MULTI
-LREM [WORKER QUEUE] [TASK ID]
-LREM running_tasks 1 "[NODE ID] [PID] [TASK ID]"
-HMSET [TASK ID] status failed error [ERROR]
-LPUSH failed [TASK ID]
+LREM blueque_reserved_tasks_[QUEUE]_[NODE ID] [TASK ID]
+LREM blueque_started_tasks_[QUEUE] 1 "[NODE ID] [PID] [TASK ID]"
+HMSET blueque_task_[TASK ID] status failed error [ERROR]
+LPUSH blueque_failed_tasks_[QUEUE] [TASK ID]
 EXEC
 ```
