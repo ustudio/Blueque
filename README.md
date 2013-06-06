@@ -120,10 +120,12 @@ Current fields are
 
 	TODO: Determine basic structure of this field.
 
-### Nodes ###
+### Listeners ###
+
+`blueque_listeners_[queue name]`
 
 In order for the system to be easily introspected, the currently
-active nodes will be stored in a Redis `Set`.
+active listeners will be stored in a Redis `Set`.
 
 TODO: should the "ID" be the hostname or IP address of the node, so
 that they are more easily identified?

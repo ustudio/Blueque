@@ -7,6 +7,9 @@ class Queue(object):
     def __init__(self, name):
         self.name = name
         self.pending_name = self._key("pending_tasks", self.name)
+
+        self._queues_key = self._key("queues")
+
         self.redis = redis.StrictRedis(host="", port=1234, db=0)
 
     def _running_job(self, node_id, pid, task_id):
@@ -24,6 +27,12 @@ class Queue(object):
     def _started_key(self):
         return self._key("started_tasks", self.name)
 
+    def add_listener(self):
+        self.redis.zincrby(self._queues_key, 1, self.name)
+
+    def remove_listener(self):
+        self.redis.zincrby(self._queues_key, -1, self.name)
+
     def enqueue(self, parameters):
         task_id = uuid.uuid4()
         encoded_params = json.dumps(parameters)
@@ -36,6 +45,8 @@ class Queue(object):
                     "queue": self.name,
                     "parameters": encoded_params
                 })
+
+            pipeline.zincrby(self._key("queues"), 0, self.name)
             pipeline.lpush(self.pending_name, task_id)
 
             pipeline.execute()

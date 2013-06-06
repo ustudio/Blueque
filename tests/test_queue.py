@@ -22,6 +22,20 @@ class TestQueue(unittest.TestCase):
     def _get_pipeline(self):
         return self.mock_redis.return_value.pipeline.return_value.__enter__.return_value
 
+    def test_add_listener(self):
+        mock_client = self.mock_redis.return_value
+
+        self.queue.add_listener()
+
+        mock_client.zincrby.assert_called_with("blueque_queues", 1, "some.queue")
+
+    def test_remove_listener(self):
+        mock_client = self.mock_redis.return_value
+
+        self.queue.remove_listener()
+
+        mock_client.zincrby.assert_called_with("blueque_queues", -1, "some.queue")
+
     def test_enqueue(self):
         pipeline = self._get_pipeline()
 
@@ -37,6 +51,7 @@ class TestQueue(unittest.TestCase):
                 "parameters": json.dumps({"some": "parameter"})
             })
 
+        pipeline.zincrby.assert_called_with("blueque_queues", 0, "some.queue")
         pipeline.lpush.assert_called_with("blueque_pending_tasks_some.queue", "1234567890")
         pipeline.execute.assert_called_with()
 
