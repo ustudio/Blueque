@@ -56,3 +56,14 @@ class Queue(object):
             pipeline.lpush("complete", task_id)
 
             pipeline.execute()
+
+    def fail(self, task_id, node_id, pid, error):
+        with self.redis.pipeline() as pipeline:
+            pipeline.lrem(node_id, task_id)
+            pipeline.lrem("running_tasks", 1, self._running_job(node_id, pid, task_id))
+
+            pipeline.hmset(task_id, {"status": "failed", "error": json.dumps(error)})
+
+            pipeline.lpush("failed", task_id)
+
+            pipeline.execute()

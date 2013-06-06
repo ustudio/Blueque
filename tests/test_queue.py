@@ -82,3 +82,19 @@ class TestQueue(unittest.TestCase):
         pipeline.lpush.assert_called_with("complete", "some_task")
 
         pipeline.execute.assert_called_with()
+
+    def test_fail_task(self):
+        pipeline = self._get_pipeline()
+
+        self.queue.fail("some_task", "some_node", 1234, {"error": "failed"})
+
+        pipeline.lrem.assert_has_calls([
+            mock.call("some_node", "some_task"),
+            mock.call("running_tasks", 1, "some_node 1234 some_task")])
+
+        pipeline.hmset.assert_called_with(
+            "some_task", {"status": "failed", "error": json.dumps({"error": "failed"})})
+
+        pipeline.lpush.assert_called_with("failed", "some_task")
+
+        pipeline.execute.assert_called_with()
