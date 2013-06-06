@@ -30,14 +30,14 @@ class TestQueue(unittest.TestCase):
         self.assertEqual("1234567890", task_id)
 
         pipeline.hmset.assert_called_with(
-            "1234567890",
+            "blueque_task_1234567890",
             {
                 "status": "pending",
                 "queue": "some.queue",
                 "parameters": json.dumps({"some": "parameter"})
             })
 
-        pipeline.lpush.assert_called_with("some.queue", "1234567890")
+        pipeline.lpush.assert_called_with("blueque_pending_tasks_some.queue", "1234567890")
         pipeline.execute.assert_called_with()
 
     def test_dequeue(self):
@@ -49,8 +49,10 @@ class TestQueue(unittest.TestCase):
 
         self.assertEqual("1234", task_id)
 
-        mock_client.rpoplpush.assert_called_with("some.queue", "some_node")
-        mock_client.hmset.assert_called_with("1234", {"status": "reserved", "node": "some_node"})
+        mock_client.rpoplpush.assert_called_with(
+            "blueque_pending_tasks_some.queue", "blueque_reserved_tasks_some.queue_some_node")
+        mock_client.hmset.assert_called_with(
+            "blueque_task_1234", {"status": "reserved", "node": "some_node"})
 
     def test_start_task(self):
         pipeline = self._get_pipeline()
@@ -61,9 +63,13 @@ class TestQueue(unittest.TestCase):
 
         self.assertEqual({"some": "parameter"}, parameters)
 
-        pipeline.sadd.assert_called_with("running_tasks", "some_node 4321 some_task")
-        pipeline.hmset.assert_called_with("some_task", {"status": "started", "pid": 4321})
-        pipeline.hget.assert_called_with("some_task", "parameters")
+        pipeline.sadd.assert_called_with(
+            "blueque_started_tasks_some.queue", "some_node 4321 some_task")
+
+        pipeline.hmset.assert_called_with(
+            "blueque_task_some_task", {"status": "started", "pid": 4321})
+
+        pipeline.hget.assert_called_with("blueque_task_some_task", "parameters")
 
         pipeline.execute.assert_called_with()
 
@@ -72,13 +78,14 @@ class TestQueue(unittest.TestCase):
 
         self.queue.complete("some_task", "some_node", 1234, {"a": "result"})
 
-        pipeline.lrem.assert_called_with("some_node", "some_task")
-        pipeline.srem.assert_called_with("running_tasks", 1, "some_node 1234 some_task")
+        pipeline.lrem.assert_called_with("blueque_reserved_tasks_some.queue_some_node", "some_task")
+        pipeline.srem.assert_called_with(
+            "blueque_started_tasks_some.queue", 1, "some_node 1234 some_task")
 
         pipeline.hmset.assert_called_with(
-            "some_task", {"status": "complete", "result": json.dumps({"a": "result"})})
+            "blueque_task_some_task", {"status": "complete", "result": json.dumps({"a": "result"})})
 
-        pipeline.lpush.assert_called_with("complete", "some_task")
+        pipeline.lpush.assert_called_with("blueque_complete_tasks_some.queue", "some_task")
 
         pipeline.execute.assert_called_with()
 
@@ -87,12 +94,14 @@ class TestQueue(unittest.TestCase):
 
         self.queue.fail("some_task", "some_node", 1234, {"error": "failed"})
 
-        pipeline.lrem.assert_called_with("some_node", "some_task")
-        pipeline.srem.assert_called_with("running_tasks", 1, "some_node 1234 some_task")
+        pipeline.lrem.assert_called_with("blueque_reserved_tasks_some.queue_some_node", "some_task")
+        pipeline.srem.assert_called_with(
+            "blueque_started_tasks_some.queue", 1, "some_node 1234 some_task")
 
         pipeline.hmset.assert_called_with(
-            "some_task", {"status": "failed", "error": json.dumps({"error": "failed"})})
+            "blueque_task_some_task",
+            {"status": "failed", "error": json.dumps({"error": "failed"})})
 
-        pipeline.lpush.assert_called_with("failed", "some_task")
+        pipeline.lpush.assert_called_with("blueque_failed_tasks_some.queue", "some_task")
 
         pipeline.execute.assert_called_with()
