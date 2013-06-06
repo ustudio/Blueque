@@ -32,9 +32,9 @@ tasks.
 
 ## Data Storage ##
 
-Currently, the backend structure is Redis. Keys should probably be
-prefixed with a namespace, i.e. named "bluequeue_foo", so that other
-systems can use the Redis DB for other things.
+Currently, the backend structure is Redis. Keys are prefixed with a
+namespace, i.e. named "bluequeue_foo", so that other systems can use
+the Redis DB for other things.
 
 ### Task Queue ###
 
@@ -120,6 +120,17 @@ Current fields are
 
 	TODO: Determine basic structure of this field.
 
+* `created`
+
+	A floating point value containing the Python timestampe
+    (`time.time()`) of the time when the task was first created
+    (enqueued).
+
+* `updated`
+
+	A floating point value containing the Python timestamp
+    (`time.time()`) of the last time any value in the task changed.
+
 ### Listeners ###
 
 `blueque_listeners_[queue name]`
@@ -149,7 +160,9 @@ queue with tasks, but no listeners, still shows up in the set.
 
 ## Task Workflow ##
 
-Tasks are executed via this workflow.
+Tasks are executed via this workflow. Note that any `HMSET` call which
+modifies a `blueque_task_[TASK ID]` should be assumed to also set the
+`updated` field of the task.
 
 ### Submission ###
 

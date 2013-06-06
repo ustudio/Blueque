@@ -1,5 +1,6 @@
 import json
 import redis
+import time
 import uuid
 
 
@@ -43,12 +44,15 @@ class Queue(object):
         encoded_params = json.dumps(parameters)
 
         with self.redis.pipeline() as pipeline:
+            now = time.time()
             pipeline.hmset(
                 self._task_key(task_id),
                 {
                     "status": "pending",
                     "queue": self.name,
-                    "parameters": encoded_params
+                    "parameters": encoded_params,
+                    "created": now,
+                    "updated": now
                 })
 
             pipeline.zincrby(self._key("queues"), 0, self.name)
@@ -62,14 +66,22 @@ class Queue(object):
         task_id = self.redis.rpoplpush(
             self.pending_name, self._reserved_key(node_id))
 
-        self.redis.hmset(self._task_key(task_id), {"status": "reserved", "node": "some_node"})
+        self.redis.hmset(
+            self._task_key(task_id),
+            {
+                "status": "reserved",
+                "node": "some_node",
+                "updated": time.time()
+            })
 
         return task_id
 
     def start(self, task_id, node_id, pid):
         with self.redis.pipeline() as pipeline:
             pipeline.sadd(self._started_key, self._running_job(node_id, pid, task_id))
-            pipeline.hmset(self._task_key(task_id), {"status": "started", "pid": pid})
+            pipeline.hmset(
+                self._task_key(task_id), {"status": "started", "pid": pid, "updated": time.time()})
+
             pipeline.hget(self._task_key(task_id), "parameters")
 
             results = pipeline.execute()
@@ -82,7 +94,12 @@ class Queue(object):
             pipeline.srem(self._started_key, 1, self._running_job(node_id, pid, task_id))
 
             pipeline.hmset(
-                self._task_key(task_id), {"status": "complete", "result": json.dumps(result)})
+                self._task_key(task_id),
+                {
+                    "status": "complete",
+                    "result": json.dumps(result),
+                    "updated": time.time()
+                })
 
             pipeline.lpush(self._key("complete_tasks", self.name), task_id)
 
@@ -94,7 +111,12 @@ class Queue(object):
             pipeline.srem(self._started_key, 1, self._running_job(node_id, pid, task_id))
 
             pipeline.hmset(
-                self._task_key(task_id), {"status": "failed", "error": json.dumps(error)})
+                self._task_key(task_id),
+                {
+                    "status": "failed",
+                    "error": json.dumps(error),
+                    "updated": time.time()
+                })
 
             pipeline.lpush(self._key("failed_tasks", self.name), task_id)
 
