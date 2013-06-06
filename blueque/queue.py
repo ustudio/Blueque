@@ -10,6 +10,7 @@ class Queue(object):
 
         self._queues_key = self._key("queues")
         self._started_key = self._key("started_tasks", self.name)
+        self._listeners_key = self._key("listeners", self.name)
 
         self.redis = redis.StrictRedis(host="", port=1234, db=0)
 
@@ -25,11 +26,17 @@ class Queue(object):
     def _task_key(self, task_id):
         return self._key("task", task_id)
 
-    def add_listener(self):
-        self.redis.zincrby(self._queues_key, 1, self.name)
+    def add_listener(self, node_id):
+        with self.redis.pipeline() as pipeline:
+            pipeline.sadd(self._listeners_key, node_id)
+            pipeline.zincrby(self._queues_key, 1, self.name)
+            pipeline.execute()
 
-    def remove_listener(self):
-        self.redis.zincrby(self._queues_key, -1, self.name)
+    def remove_listener(self, node_id):
+        with self.redis.pipeline() as pipeline:
+            pipeline.zincrby(self._queues_key, -1, self.name)
+            pipeline.srem(self._listeners_key, node_id)
+            pipeline.execute()
 
     def enqueue(self, parameters):
         task_id = uuid.uuid4()

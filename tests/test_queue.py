@@ -23,18 +23,24 @@ class TestQueue(unittest.TestCase):
         return self.mock_redis.return_value.pipeline.return_value.__enter__.return_value
 
     def test_add_listener(self):
-        mock_client = self.mock_redis.return_value
+        pipeline = self._get_pipeline()
 
-        self.queue.add_listener()
+        self.queue.add_listener("some_node")
 
-        mock_client.zincrby.assert_called_with("blueque_queues", 1, "some.queue")
+        pipeline.sadd.assert_called_with("blueque_listeners_some.queue", "some_node")
+        pipeline.zincrby.assert_called_with("blueque_queues", 1, "some.queue")
+
+        pipeline.execute.assert_called_with()
 
     def test_remove_listener(self):
-        mock_client = self.mock_redis.return_value
+        pipeline = self._get_pipeline()
 
-        self.queue.remove_listener()
+        self.queue.remove_listener("some_node")
 
-        mock_client.zincrby.assert_called_with("blueque_queues", -1, "some.queue")
+        pipeline.zincrby.assert_called_with("blueque_queues", -1, "some.queue")
+        pipeline.srem.assert_called_with("blueque_listeners_some.queue", "some_node")
+
+        pipeline.execute.assert_called_with()
 
     def test_enqueue(self):
         pipeline = self._get_pipeline()
