@@ -9,6 +9,7 @@ class Queue(object):
         self.pending_name = self._key("pending_tasks", self.name)
 
         self._queues_key = self._key("queues")
+        self._started_key = self._key("started_tasks", self.name)
 
         self.redis = redis.StrictRedis(host="", port=1234, db=0)
 
@@ -23,9 +24,6 @@ class Queue(object):
 
     def _task_key(self, task_id):
         return self._key("task", task_id)
-
-    def _started_key(self):
-        return self._key("started_tasks", self.name)
 
     def add_listener(self):
         self.redis.zincrby(self._queues_key, 1, self.name)
@@ -63,7 +61,7 @@ class Queue(object):
 
     def start(self, task_id, node_id, pid):
         with self.redis.pipeline() as pipeline:
-            pipeline.sadd(self._started_key(), self._running_job(node_id, pid, task_id))
+            pipeline.sadd(self._started_key, self._running_job(node_id, pid, task_id))
             pipeline.hmset(self._task_key(task_id), {"status": "started", "pid": pid})
             pipeline.hget(self._task_key(task_id), "parameters")
 
@@ -74,7 +72,7 @@ class Queue(object):
     def complete(self, task_id, node_id, pid, result):
         with self.redis.pipeline() as pipeline:
             pipeline.lrem(self._reserved_key(node_id), task_id)
-            pipeline.srem(self._started_key(), 1, self._running_job(node_id, pid, task_id))
+            pipeline.srem(self._started_key, 1, self._running_job(node_id, pid, task_id))
 
             pipeline.hmset(
                 self._task_key(task_id), {"status": "complete", "result": json.dumps(result)})
@@ -86,7 +84,7 @@ class Queue(object):
     def fail(self, task_id, node_id, pid, error):
         with self.redis.pipeline() as pipeline:
             pipeline.lrem(self._reserved_key(node_id), task_id)
-            pipeline.srem(self._started_key(), 1, self._running_job(node_id, pid, task_id))
+            pipeline.srem(self._started_key, 1, self._running_job(node_id, pid, task_id))
 
             pipeline.hmset(
                 self._task_key(task_id), {"status": "failed", "error": json.dumps(error)})
