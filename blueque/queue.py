@@ -1,4 +1,3 @@
-import json
 import redis
 import time
 import uuid

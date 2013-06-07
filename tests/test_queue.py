@@ -1,6 +1,5 @@
 from blueque.queue import Queue
 
-import json
 import mock
 import unittest
 
