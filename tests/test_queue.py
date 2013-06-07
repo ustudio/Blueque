@@ -15,12 +15,16 @@ class TestQueue(unittest.TestCase):
         self.time_patch = mock.patch("time.time", return_value=12.34)
         self.time_patch.start()
 
+        self.log_info_patch = mock.patch("logging.info", autospec=True)
+        self.log_info = self.log_info_patch.start()
+
         self.queue = Queue("some.queue")
 
     def tearDown(self):
         self.redis_patch.stop()
         self.uuid_patch.stop()
         self.time_patch.stop()
+        self.log_info_patch.stop()
 
     def _get_pipeline(self):
         return self.mock_redis.return_value.pipeline.return_value.__enter__.return_value
@@ -35,6 +39,8 @@ class TestQueue(unittest.TestCase):
 
         pipeline.execute.assert_called_with()
 
+        self.log_info.assert_called_with("Blueque queue some.queue: adding listener some_node")
+
     def test_remove_listener(self):
         pipeline = self._get_pipeline()
 
@@ -44,6 +50,8 @@ class TestQueue(unittest.TestCase):
         pipeline.srem.assert_called_with("blueque_listeners_some.queue", "some_node")
 
         pipeline.execute.assert_called_with()
+
+        self.log_info.assert_called_with("Blueque queue some.queue: removing listener some_node")
 
     def test_enqueue(self):
         pipeline = self._get_pipeline()
@@ -66,6 +74,9 @@ class TestQueue(unittest.TestCase):
         pipeline.lpush.assert_called_with("blueque_pending_tasks_some.queue", "1234567890")
         pipeline.execute.assert_called_with()
 
+        self.log_info.assert_called_with(
+            "Blueque queue some.queue: adding task 1234567890, parameters: some parameter")
+
     def test_dequeue(self):
         mock_client = self.mock_redis.return_value
 
@@ -79,6 +90,11 @@ class TestQueue(unittest.TestCase):
             "blueque_pending_tasks_some.queue", "blueque_reserved_tasks_some.queue_some_node")
         mock_client.hmset.assert_called_with(
             "blueque_task_1234", {"status": "reserved", "node": "some_node", "updated": 12.34})
+
+        self.log_info.assert_has_calls([
+            mock.call("Blueque queue some.queue: reserving task on some_node"),
+            mock.call("Blueque queue some.queue: got task 1234")
+        ])
 
     def test_start_task(self):
         pipeline = self._get_pipeline()
@@ -98,6 +114,11 @@ class TestQueue(unittest.TestCase):
         pipeline.hget.assert_called_with("blueque_task_some_task", "parameters")
 
         pipeline.execute.assert_called_with()
+
+        self.log_info.assert_has_calls([
+            mock.call("Blueque queue some.queue: starting task some_task on some_node, pid 4321"),
+            mock.call("Blueque queue some.queue: task some_task, parameters: some parameter")
+        ])
 
     def test_complete_task(self):
         pipeline = self._get_pipeline()
@@ -120,6 +141,9 @@ class TestQueue(unittest.TestCase):
 
         pipeline.execute.assert_called_with()
 
+        self.log_info.assert_called_with(
+            "Blueque queue some.queue: completing task some_task on some_node, pid: 1234, result: a result")
+
     def test_fail_task(self):
         pipeline = self._get_pipeline()
 
@@ -140,3 +164,6 @@ class TestQueue(unittest.TestCase):
         pipeline.lpush.assert_called_with("blueque_failed_tasks_some.queue", "some_task")
 
         pipeline.execute.assert_called_with()
+
+        self.log_info.assert_called_with(
+            "Blueque queue some.queue: failed task some_task on some_node, pid: 1234, error: error message")

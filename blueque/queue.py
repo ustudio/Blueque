@@ -1,3 +1,4 @@
+import logging
 import redis
 import time
 import uuid
@@ -26,13 +27,18 @@ class Queue(object):
     def _task_key(self, task_id):
         return self._key("task", task_id)
 
+    def _log(self, message):
+        logging.info("Blueque queue %s: %s" % (self.name, message))
+
     def add_listener(self, node_id):
+        self._log("adding listener %s" % (node_id))
         with self.redis.pipeline() as pipeline:
             pipeline.sadd(self._listeners_key, node_id)
             pipeline.zincrby(self._queues_key, 1, self.name)
             pipeline.execute()
 
     def remove_listener(self, node_id):
+        self._log("removing listener %s" % (node_id))
         with self.redis.pipeline() as pipeline:
             pipeline.zincrby(self._queues_key, -1, self.name)
             pipeline.srem(self._listeners_key, node_id)
@@ -40,6 +46,8 @@ class Queue(object):
 
     def enqueue(self, parameters):
         task_id = uuid.uuid4()
+
+        self._log("adding task %s, parameters: %s" % (task_id, parameters))
 
         with self.redis.pipeline() as pipeline:
             now = time.time()
@@ -61,8 +69,12 @@ class Queue(object):
         return task_id
 
     def dequeue(self, node_id):
+        self._log("reserving task on %s" % (node_id))
+
         task_id = self.redis.rpoplpush(
             self.pending_name, self._reserved_key(node_id))
+
+        self._log("got task %s" % (task_id))
 
         self.redis.hmset(
             self._task_key(task_id),
@@ -75,6 +87,7 @@ class Queue(object):
         return task_id
 
     def start(self, task_id, node_id, pid):
+        self._log("starting task %s on %s, pid %i" % (task_id, node_id, pid))
         with self.redis.pipeline() as pipeline:
             pipeline.sadd(self._started_key, self._running_job(node_id, pid, task_id))
             pipeline.hmset(
@@ -84,9 +97,16 @@ class Queue(object):
 
             results = pipeline.execute()
 
-            return results[-1]
+            parameters = results[-1]
+
+            self._log("task %s, parameters: %s" % (task_id, parameters))
+
+            return parameters
 
     def complete(self, task_id, node_id, pid, result):
+        self._log(
+            "completing task %s on %s, pid: %i, result: %s" % (task_id, node_id, pid, result))
+
         with self.redis.pipeline() as pipeline:
             pipeline.lrem(self._reserved_key(node_id), task_id)
             pipeline.srem(self._started_key, 1, self._running_job(node_id, pid, task_id))
@@ -104,6 +124,8 @@ class Queue(object):
             pipeline.execute()
 
     def fail(self, task_id, node_id, pid, error):
+        self._log("failed task %s on %s, pid: %i, error: %s" % (task_id, node_id, pid, error))
+
         with self.redis.pipeline() as pipeline:
             pipeline.lrem(self._reserved_key(node_id), task_id)
             pipeline.srem(self._started_key, 1, self._running_job(node_id, pid, task_id))
