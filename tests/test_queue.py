@@ -1,13 +1,13 @@
 from blueque.queue import Queue
 
 import mock
+import redis
 import unittest
 
 
 class TestQueue(unittest.TestCase):
     def setUp(self):
-        self.redis_patch = mock.patch("redis.StrictRedis", autospec=True)
-        self.mock_redis = self.redis_patch.start()
+        self.mock_redis = mock.MagicMock(spec=redis.StrictRedis)
 
         self.uuid_patch = mock.patch("uuid.uuid4", return_value="1234567890")
         self.uuid_patch.start()
@@ -18,16 +18,15 @@ class TestQueue(unittest.TestCase):
         self.log_info_patch = mock.patch("logging.info", autospec=True)
         self.log_info = self.log_info_patch.start()
 
-        self.queue = Queue("some.queue")
+        self.queue = Queue("some.queue", self.mock_redis)
 
     def tearDown(self):
-        self.redis_patch.stop()
         self.uuid_patch.stop()
         self.time_patch.stop()
         self.log_info_patch.stop()
 
     def _get_pipeline(self):
-        return self.mock_redis.return_value.pipeline.return_value.__enter__.return_value
+        return self.mock_redis.pipeline.return_value.__enter__.return_value
 
     def test_add_listener(self):
         pipeline = self._get_pipeline()
@@ -78,17 +77,15 @@ class TestQueue(unittest.TestCase):
             "Blueque queue some.queue: adding task 1234567890, parameters: some parameter")
 
     def test_dequeue(self):
-        mock_client = self.mock_redis.return_value
-
-        mock_client.rpoplpush.return_value = "1234"
+        self.mock_redis.rpoplpush.return_value = "1234"
 
         task_id = self.queue.dequeue("some_node")
 
         self.assertEqual("1234", task_id)
 
-        mock_client.rpoplpush.assert_called_with(
+        self.mock_redis.rpoplpush.assert_called_with(
             "blueque_pending_tasks_some.queue", "blueque_reserved_tasks_some.queue_some_node")
-        mock_client.hmset.assert_called_with(
+        self.mock_redis.hmset.assert_called_with(
             "blueque_task_1234", {"status": "reserved", "node": "some_node", "updated": 12.34})
 
         self.log_info.assert_has_calls([
