@@ -1,4 +1,4 @@
-from blueque.queue import Queue
+from blueque.redis_queue import RedisQueue
 
 import mock
 import redis
@@ -18,7 +18,7 @@ class TestQueue(unittest.TestCase):
         self.log_info_patch = mock.patch("logging.info", autospec=True)
         self.log_info = self.log_info_patch.start()
 
-        self.queue = Queue("some.queue", self.mock_redis)
+        self.queue = RedisQueue("some.queue", self.mock_redis)
 
     def tearDown(self):
         self.uuid_patch.stop()

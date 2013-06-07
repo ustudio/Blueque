@@ -3,7 +3,7 @@ import time
 import uuid
 
 
-class Queue(object):
+class RedisQueue(object):
     def __init__(self, name, redis_client):
         self._name = name
         self._pending_name = self._key("pending_tasks", self._name)
