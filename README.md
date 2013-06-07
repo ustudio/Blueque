@@ -30,6 +30,76 @@ tasks.
 	A process, running on a *node*, created by a *listener*, executing
     a *task*.
 
+## API ##
+
+### Client Connection ###
+
+The `Blueque.Client` object stores the connection to the Blueque
+system, and constructs the other objects necessary for interacting
+with the system
+
+```python
+client = Blueque.Client(hostname, port, db)
+```
+
+### Queue ###
+
+The `Blueque.queue.Queue` object provides the interface to a named
+queue of tasks.
+
+```python
+queue = client.get_queue("some.queue")
+```
+
+#### `Queue.enqueue` ####
+
+```python
+task_id = queue.enqueue(parameters)
+```
+
+Returns the Task ID (a string) of the newly enqueued task
+
+### Task ###
+
+The task object provides a basic, read-only view of all the attributes
+of a task.
+
+```python
+task = client.get_task(task_id)
+```
+
+There is a read-only attribute for all of the task attributes stored
+in Redis (see below).
+
+### Listener ###
+
+The listener object provides the interface used to listen for new
+tasks.
+
+```python
+listener = client.get_listener("some.queue")
+```
+
+#### `Listener.listen` ####
+
+```python
+def on_new_task(task_id):
+	print "starting task", task_id
+
+listener.listen(on_new_task)
+```
+
+Asynchronous function which takes a callback and returns
+immediately. The callback will be called each time a task is available
+to be executed.
+
+
+### Processing ###
+
+Need some way for the spawned processing thread to report back
+`started`, `complete` and `failed` status updates. Should Blueque be
+responsible for actually starting the new process?
+
 ## Data Storage ##
 
 Currently, the backend structure is Redis. Keys are prefixed with a
