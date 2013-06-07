@@ -5,7 +5,7 @@ import redis
 import unittest
 
 
-class TestQueue(unittest.TestCase):
+class TestRedisQueue(unittest.TestCase):
     def setUp(self):
         self.mock_redis = mock.MagicMock(spec=redis.StrictRedis)
 
