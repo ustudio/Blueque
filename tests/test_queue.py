@@ -49,7 +49,7 @@ class TestQueue(unittest.TestCase):
     def test_enqueue(self):
         pipeline = self._get_pipeline()
 
-        task_id = self.queue.enqueue({"some": "parameter"})
+        task_id = self.queue.enqueue("some parameter")
 
         self.assertEqual("1234567890", task_id)
 
@@ -58,7 +58,7 @@ class TestQueue(unittest.TestCase):
             {
                 "status": "pending",
                 "queue": "some.queue",
-                "parameters": json.dumps({"some": "parameter"}),
+                "parameters": "some parameter",
                 "created": 12.34,
                 "updated": 12.34
             })
@@ -84,11 +84,11 @@ class TestQueue(unittest.TestCase):
     def test_start_task(self):
         pipeline = self._get_pipeline()
 
-        pipeline.execute.return_value = [1, True, json.dumps({"some": "parameter"})]
+        pipeline.execute.return_value = [1, True, "some parameter"]
 
         parameters = self.queue.start("some_task", "some_node", 4321)
 
-        self.assertEqual({"some": "parameter"}, parameters)
+        self.assertEqual("some parameter", parameters)
 
         pipeline.sadd.assert_called_with(
             "blueque_started_tasks_some.queue", "some_node 4321 some_task")
@@ -103,7 +103,7 @@ class TestQueue(unittest.TestCase):
     def test_complete_task(self):
         pipeline = self._get_pipeline()
 
-        self.queue.complete("some_task", "some_node", 1234, {"a": "result"})
+        self.queue.complete("some_task", "some_node", 1234, "a result")
 
         pipeline.lrem.assert_called_with("blueque_reserved_tasks_some.queue_some_node", "some_task")
         pipeline.srem.assert_called_with(
@@ -113,7 +113,7 @@ class TestQueue(unittest.TestCase):
             "blueque_task_some_task",
             {
                 "status": "complete",
-                "result": json.dumps({"a": "result"}),
+                "result": "a result",
                 "updated": 12.34
             })
 
@@ -124,7 +124,7 @@ class TestQueue(unittest.TestCase):
     def test_fail_task(self):
         pipeline = self._get_pipeline()
 
-        self.queue.fail("some_task", "some_node", 1234, {"error": "failed"})
+        self.queue.fail("some_task", "some_node", 1234, "error message")
 
         pipeline.lrem.assert_called_with("blueque_reserved_tasks_some.queue_some_node", "some_task")
         pipeline.srem.assert_called_with(
@@ -134,7 +134,7 @@ class TestQueue(unittest.TestCase):
             "blueque_task_some_task",
             {
                 "status": "failed",
-                "error": json.dumps({"error": "failed"}),
+                "error": "error message",
                 "updated": 12.34
             })
 

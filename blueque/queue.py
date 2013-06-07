@@ -41,7 +41,6 @@ class Queue(object):
 
     def enqueue(self, parameters):
         task_id = uuid.uuid4()
-        encoded_params = json.dumps(parameters)
 
         with self.redis.pipeline() as pipeline:
             now = time.time()
@@ -50,7 +49,7 @@ class Queue(object):
                 {
                     "status": "pending",
                     "queue": self.name,
-                    "parameters": encoded_params,
+                    "parameters": parameters,
                     "created": now,
                     "updated": now
                 })
@@ -86,7 +85,7 @@ class Queue(object):
 
             results = pipeline.execute()
 
-            return json.loads(results[-1])
+            return results[-1]
 
     def complete(self, task_id, node_id, pid, result):
         with self.redis.pipeline() as pipeline:
@@ -97,7 +96,7 @@ class Queue(object):
                 self._task_key(task_id),
                 {
                     "status": "complete",
-                    "result": json.dumps(result),
+                    "result": result,
                     "updated": time.time()
                 })
 
@@ -114,7 +113,7 @@ class Queue(object):
                 self._task_key(task_id),
                 {
                     "status": "failed",
-                    "error": json.dumps(error),
+                    "error": error,
                     "updated": time.time()
                 })
 
