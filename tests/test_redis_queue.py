@@ -3,13 +3,15 @@ from blueque.redis_queue import RedisQueue
 import mock
 import redis
 import unittest
+import uuid
 
 
 class TestRedisQueue(unittest.TestCase):
     def setUp(self):
         self.mock_redis = mock.MagicMock(spec=redis.StrictRedis)
 
-        self.uuid_patch = mock.patch("uuid.uuid4", return_value="1234567890")
+        self.uuid_patch = mock.patch(
+            "uuid.uuid4", return_value=uuid.UUID("{12345678-1234-1234-1234-123456781234}"))
         self.uuid_patch.start()
 
         self.time_patch = mock.patch("time.time", return_value=12.34)
@@ -57,10 +59,10 @@ class TestRedisQueue(unittest.TestCase):
 
         task_id = self.queue.enqueue("some parameter")
 
-        self.assertEqual("1234567890", task_id)
+        self.assertEqual("12345678-1234-1234-1234-123456781234", task_id)
 
         pipeline.hmset.assert_called_with(
-            "blueque_task_1234567890",
+            "blueque_task_12345678-1234-1234-1234-123456781234",
             {
                 "status": "pending",
                 "queue": "some.queue",
@@ -70,11 +72,12 @@ class TestRedisQueue(unittest.TestCase):
             })
 
         pipeline.zincrby.assert_called_with("blueque_queues", 0, "some.queue")
-        pipeline.lpush.assert_called_with("blueque_pending_tasks_some.queue", "1234567890")
+        pipeline.lpush.assert_called_with(
+            "blueque_pending_tasks_some.queue", "12345678-1234-1234-1234-123456781234")
         pipeline.execute.assert_called_with()
 
         self.log_info.assert_called_with(
-            "Blueque queue some.queue: adding task 1234567890, parameters: some parameter")
+            "Blueque queue some.queue: adding task 12345678-1234-1234-1234-123456781234, parameters: some parameter")
 
     def test_dequeue(self):
         self.mock_redis.rpoplpush.return_value = "1234"

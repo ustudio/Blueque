@@ -44,7 +44,7 @@ class RedisQueue(object):
             pipeline.execute()
 
     def enqueue(self, parameters):
-        task_id = uuid.uuid4()
+        task_id = str(uuid.uuid4())
 
         self._log("adding task %s, parameters: %s" % (task_id, parameters))
 
