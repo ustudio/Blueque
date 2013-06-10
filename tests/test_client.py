@@ -5,6 +5,8 @@ import unittest
 
 
 class TestClient(unittest.TestCase):
+    # The tests for the factory functions are in the tests for the
+    # classes they create.
 
     @mock.patch("redis.StrictRedis", autospec=True)
     def setUp(self, mock_redis):
