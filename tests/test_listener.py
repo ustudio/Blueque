@@ -20,3 +20,13 @@ class TestListener(unittest.TestCase):
 
     def test_listener_adds_itself(self):
         self.mock_redis_queue.add_listener.assert_called_with("somehost.example.com_2314")
+
+    def test_listener_calls_callback_when_task_in_queue(self):
+        callback = mock.MagicMock()
+
+        self.mock_redis_queue.dequeue.return_value = "some_task"
+
+        self.listener.listen(callback)
+
+        self.mock_redis_queue.dequeue.assert_called_with("somehost.example.com_2314")
+        callback.assert_called_with("some_task")
