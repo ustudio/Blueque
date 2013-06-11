@@ -72,6 +72,9 @@ class RedisQueue(object):
         task_id = self._redis.rpoplpush(
             self._pending_name, self._reserved_key(node_id))
 
+        if task_id is None:
+            return None
+
         self._log("got task %s" % (task_id))
 
         self._redis.hmset(

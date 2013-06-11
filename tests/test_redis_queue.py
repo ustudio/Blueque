@@ -96,6 +96,21 @@ class TestRedisQueue(unittest.TestCase):
             mock.call("Blueque queue some.queue: got task 1234")
         ])
 
+    def test_dequeue_returns_null_when_empty(self):
+        self.mock_redis.rpoplpush.return_value = None
+
+        task_id = self.queue.dequeue("some_node")
+
+        self.assertEqual(None, task_id)
+
+        self.mock_redis.rpoplpush.assert_called_with(
+            "blueque_pending_tasks_some.queue", "blueque_reserved_tasks_some.queue_some_node")
+        self.mock_redis.hmset.assert_has_calls([])
+
+        self.log_info.assert_has_calls([
+            mock.call("Blueque queue some.queue: reserving task on some_node")
+        ])
+
     def test_start_task(self):
         pipeline = self._get_pipeline()
 
