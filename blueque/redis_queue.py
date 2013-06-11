@@ -1,3 +1,5 @@
+from blueque.redis_task import RedisTask
+
 import logging
 import time
 import uuid
@@ -22,9 +24,6 @@ class RedisQueue(object):
 
     def _reserved_key(self, node_id):
         return self._key("reserved_tasks", self._name, node_id)
-
-    def _task_key(self, task_id):
-        return self._key("task", task_id)
 
     def _log(self, message):
         logging.info("Blueque queue %s: %s" % (self._name, message))
@@ -51,7 +50,7 @@ class RedisQueue(object):
         with self._redis.pipeline() as pipeline:
             now = time.time()
             pipeline.hmset(
-                self._task_key(task_id),
+                RedisTask.task_key(task_id),
                 {
                     "status": "pending",
                     "queue": self._name,
@@ -76,7 +75,7 @@ class RedisQueue(object):
         self._log("got task %s" % (task_id))
 
         self._redis.hmset(
-            self._task_key(task_id),
+            RedisTask.task_key(task_id),
             {
                 "status": "reserved",
                 "node": "some_node",
@@ -90,9 +89,10 @@ class RedisQueue(object):
         with self._redis.pipeline() as pipeline:
             pipeline.sadd(self._started_key, self._running_job(node_id, pid, task_id))
             pipeline.hmset(
-                self._task_key(task_id), {"status": "started", "pid": pid, "updated": time.time()})
+                RedisTask.task_key(task_id),
+                {"status": "started", "pid": pid, "updated": time.time()})
 
-            pipeline.hget(self._task_key(task_id), "parameters")
+            pipeline.hget(RedisTask.task_key(task_id), "parameters")
 
             results = pipeline.execute()
 
@@ -111,7 +111,7 @@ class RedisQueue(object):
             pipeline.srem(self._started_key, 1, self._running_job(node_id, pid, task_id))
 
             pipeline.hmset(
-                self._task_key(task_id),
+                RedisTask.task_key(task_id),
                 {
                     "status": "complete",
                     "result": result,
@@ -130,7 +130,7 @@ class RedisQueue(object):
             pipeline.srem(self._started_key, 1, self._running_job(node_id, pid, task_id))
 
             pipeline.hmset(
-                self._task_key(task_id),
+                RedisTask.task_key(task_id),
                 {
                     "status": "failed",
                     "error": error,
