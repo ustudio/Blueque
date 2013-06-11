@@ -23,7 +23,9 @@ tasks.
 
 * *Listener*
 
-	A process running on a node, listening for new tasks on a single queue.
+	A process running on a node, listening for new tasks on a single
+    queue. The system does not support multiple listeners listening to
+    the *same queue* on the *same node*.
 
 * *Process*
 
@@ -115,13 +117,13 @@ Stored in a `List`, accessed as a queue: new tasks are added via
 for each task queue (channel). All that is stored in the `List` is a
 task ID, which will be used to retrieve the task data.
 
-### Node Task List ###
+### Listener Task List ###
 
-`blueque_reserved_tasks_[queue name]_[node name]`
+`blueque_reserved_tasks_[queue name]_[listener ID]`
 
-Stored in a `List`, this is used to keep track of which nodes are
+Stored in a `List`, this is used to keep track of which listeners are
 running which tasks. Tasks should be atomically moved from the *Task
-Queue* to the *Node Task List* via `RPOPLPUSH`, so that they don't get
+Queue* to the *Listener Task List* via `RPOPLPUSH`, so that they don't get
 lost.
 
 ### Task Channel ###
@@ -179,7 +181,7 @@ Current fields are
 
 * `node`
 
-	The node ID of the node running the task. Will not be set if the
+	The listener ID of the node running the task. Will not be set if the
     task has not been started yet.
 
 * `pid`
@@ -203,15 +205,11 @@ Current fields are
 `blueque_listeners_[queue name]`
 
 In order for the system to be easily introspected, the currently
-active listeners will be stored in a Redis `Set`.
+active listeners will be stored in a Redis `Set`. Listeners are stored
+by their `LISTENER ID`, which must be `[hostname]_[pid]`.
 
-TODO: should the "ID" be the hostname or IP address of the node, so
-that they are more easily identified?
-
-TODO: should nodes be required to post a "heartbeat" back to their
-node key? If so, we could monitor that they are alive, but we would
-need to decide how they post back: would the process function be
-responsible for posting back while it is running?
+Note that this means that all hosts in the system must have unique
+names.
 
 ### Queues ###
 
@@ -289,7 +287,7 @@ tasks:
 
 ```
 MULTI
-SADD blueque_started_tasks_[QUEUE] "[NODE ID] [PID] [TASK ID]"
+SADD blueque_started_tasks_[QUEUE] "[LISTENER ID] [PID] [TASK ID]"
 HMSET blueque_task_[TASK ID] status started pid [PID]
 HGET blueque_task_[TASK ID] parameters
 EXEC
@@ -306,8 +304,8 @@ JSON-serialized result of the task, as a single atomic transaction.
 
 ```
 MULTI
-LREM blueque_reserved_tasks_[QUEUE]_[NODE ID] [TASK ID]
-LREM blueque_started_tasks_[QUEUE] 1 "[NODE ID] [PID] [TASK ID]"
+LREM blueque_reserved_tasks_[QUEUE]_[LISTENER ID] [TASK ID]
+LREM blueque_started_tasks_[QUEUE] 1 "[LISTENER ID] [PID] [TASK ID]"
 HMSET blueque_task_[TASK ID] status complete result [RESULT]
 LPUSH blueque_complete_tasks_[QUEUE] [TASK ID]
 EXEC
@@ -323,8 +321,8 @@ JSON-serialized description of the error (see above).
 
 ```
 MULTI
-LREM blueque_reserved_tasks_[QUEUE]_[NODE ID] [TASK ID]
-LREM blueque_started_tasks_[QUEUE] 1 "[NODE ID] [PID] [TASK ID]"
+LREM blueque_reserved_tasks_[QUEUE]_[LISTENER ID] [TASK ID]
+LREM blueque_started_tasks_[QUEUE] 1 "[LISTENER ID] [PID] [TASK ID]"
 HMSET blueque_task_[TASK ID] status failed error [ERROR]
 LPUSH blueque_failed_tasks_[QUEUE] [TASK ID]
 EXEC
