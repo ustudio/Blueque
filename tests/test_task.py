@@ -77,3 +77,18 @@ class TestTask(unittest.TestCase):
 
         with self.assertRaises(AttributeError):
             task.updated = 2.3
+
+    def test_missing_attributes_are_none(self):
+        self.mock_redis.hgetall.return_value = {}
+
+        task = self.client.get_task("some_task")
+
+        self.assertEqual(None, task.status)
+        self.assertEqual(None, task.queue)
+        self.assertEqual(None, task.parameters)
+        self.assertEqual(None, task.result)
+        self.assertEqual(None, task.error)
+        self.assertEqual(None, task.node)
+        self.assertEqual(None, task.pid)
+        self.assertEqual(None, task.created)
+        self.assertEqual(None, task.updated)

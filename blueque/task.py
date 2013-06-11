@@ -9,36 +9,36 @@ class Task(object):
 
     @property
     def status(self):
-        return self._attributes["status"]
+        return self._attributes.get("status")
 
     @property
     def queue(self):
-        return self._attributes["queue"]
+        return self._attributes.get("queue")
 
     @property
     def parameters(self):
-        return self._attributes["parameters"]
+        return self._attributes.get("parameters")
 
     @property
     def result(self):
-        return self._attributes["result"]
+        return self._attributes.get("result")
 
     @property
     def error(self):
-        return self._attributes["error"]
+        return self._attributes.get("error")
 
     @property
     def node(self):
-        return self._attributes["node"]
+        return self._attributes.get("node")
 
     @property
     def pid(self):
-        return self._attributes["pid"]
+        return self._attributes.get("pid")
 
     @property
     def created(self):
-        return self._attributes["created"]
+        return self._attributes.get("created")
 
     @property
     def updated(self):
-        return self._attributes["updated"]
+        return self._attributes.get("updated")
