@@ -85,22 +85,54 @@ listener = client.get_listener("some.queue")
 #### `Listener.listen` ####
 
 ```python
-def on_new_task(task_id):
-	print "starting task", task_id
+def on_new_task(processor):
+	print "starting task"
 
 listener.listen(on_new_task)
 ```
 
-Asynchronous function which takes a callback and returns
-immediately. The callback will be called each time a task is available
-to be executed.
+Asynchronous function which takes a callback and never returns. The
+callback will be called each time a task is available to be executed.
 
 
-### Processing ###
+### Processor ###
 
-Need some way for the spawned processing thread to report back
-`started`, `complete` and `failed` status updates. Should Blueque be
-responsible for actually starting the new process?
+A Processor object provides the interface used to update a task while
+it is being processed. Processor objects will be passed to the
+`Listener.listen` callback, and do not need to be constructed manually
+for normal task execution operations.
+
+If you need to construct one for administrative purposes, the
+signature is:
+
+```python
+processor = Processor("some.queue", listener_id, task_id, redis_queue)
+```
+
+#### `Processor.start` ####
+
+```python
+parameters = processor.start(pid)
+```
+
+Marks a task as being started, by the specified pid, and returns the
+parameters of that task.
+
+#### `Processor.complete` ####
+
+```python
+processor.complete("some result")
+```
+
+Marks a task as being complete, and stores the result.
+
+#### `Processor.fail` ####
+
+```python
+processor.fail("some error")
+```
+
+Marks a task as having failed, and stores the error.
 
 ## Data Storage ##
 
