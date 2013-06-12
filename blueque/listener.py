@@ -1,3 +1,5 @@
+from blueque.processor import Processor
+
 import time
 
 
@@ -11,6 +13,7 @@ class Listener(object):
         while True:
             task_id = self._queue.dequeue(self._name)
             if task_id is not None:
-                callback(task_id)
+                processor = Processor(self._name, task_id, self._queue)
+                callback(processor)
             else:
                 time.sleep(1)

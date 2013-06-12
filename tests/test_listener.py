@@ -25,7 +25,8 @@ class TestListener(unittest.TestCase):
     def test_listener_adds_itself(self):
         self.mock_redis_queue.add_listener.assert_called_with("somehost.example.com_2314")
 
-    def test_listener_calls_callback_when_task_in_queue(self):
+    @mock.patch("blueque.listener.Processor", autospec=True)
+    def test_listener_calls_callback_when_task_in_queue(self, mock_processor):
         callback = mock.MagicMock()
 
         self.mock_redis_queue.dequeue.side_effect = ["some_task", BreakLoopException()]
@@ -36,9 +37,13 @@ class TestListener(unittest.TestCase):
             pass
 
         self.mock_redis_queue.dequeue.assert_called_with("somehost.example.com_2314")
-        callback.assert_called_with("some_task")
+        callback.assert_called_with(mock_processor.return_value)
 
-    def test_listener_calls_callback_multiple_times(self):
+        mock_processor.assert_called_with(
+            "somehost.example.com_2314", "some_task", self.mock_redis_queue)
+
+    @mock.patch("blueque.listener.Processor", autospec=True)
+    def test_listener_calls_callback_multiple_times(self, mock_processor):
         callback = mock.MagicMock()
 
         self.mock_redis_queue.dequeue.side_effect = [
@@ -52,10 +57,21 @@ class TestListener(unittest.TestCase):
         self.mock_redis_queue.dequeue.assert_has_calls(
             [mock.call("somehost.example.com_2314"), mock.call("somehost.example.com_2314")])
 
-        callback.assert_has_calls([mock.call("some_task"), mock.call("other_task")])
+        callback.assert_has_calls(
+            [
+                mock.call(mock_processor.return_value),
+                mock.call(mock_processor.return_value)
+            ])
+
+        mock_processor.assert_has_calls(
+            [
+                mock.call("somehost.example.com_2314", "some_task", self.mock_redis_queue),
+                mock.call("somehost.example.com_2314", "other_task", self.mock_redis_queue)
+            ])
 
     @mock.patch("time.sleep", autospec=True)
-    def test_listener_sleeps_when_no_task_available(self, mock_sleep):
+    @mock.patch("blueque.listener.Processor", autospec=True)
+    def test_listener_sleeps_when_no_task_available(self, mock_processor, mock_sleep):
         callback = mock.MagicMock()
 
         self.mock_redis_queue.dequeue.side_effect = [None, "some_task", BreakLoopException()]
@@ -68,6 +84,8 @@ class TestListener(unittest.TestCase):
         self.mock_redis_queue.dequeue.assert_has_calls(
             [mock.call("somehost.example.com_2314"), mock.call("somehost.example.com_2314")])
 
-        callback.assert_has_calls([mock.call("some_task")])
+        callback.assert_has_calls([mock.call(mock_processor.return_value)])
+        mock_processor.assert_called_with(
+            "somehost.example.com_2314", "some_task", self.mock_redis_queue)
 
         mock_sleep.assert_has_calls([mock.call(1)])

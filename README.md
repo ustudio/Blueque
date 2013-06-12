@@ -106,7 +106,7 @@ If you need to construct one for administrative purposes, the
 signature is:
 
 ```python
-processor = Processor("some.queue", listener_id, task_id, redis_queue)
+processor = Processor(listener_id, task_id, redis_queue)
 ```
 
 #### `Processor.start` ####
