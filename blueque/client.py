@@ -24,4 +24,4 @@ class Client(object):
     def get_listener(self, queue_name):
         listener_name = "_".join((socket.getfqdn(), str(os.getpid())))
         redis_queue = RedisQueue(queue_name, self._redis)
-        return Listener(listener_name, redis_queue)
+        return Listener(listener_name, redis_queue, self.get_task)
