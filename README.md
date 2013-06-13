@@ -85,14 +85,11 @@ listener = client.get_listener("some.queue")
 #### `Listener.listen` ####
 
 ```python
-def on_new_task(processor):
-	print "starting task"
-
-listener.listen(on_new_task)
+task = listener.listen(on_new_task)
 ```
 
-Asynchronous function which takes a callback and never returns. The
-callback will be called each time a task is available to be executed.
+Blocks listening for a new task to execute until one is ready, then
+returns a `Task` object describing that task.
 
 
 ### Processor ###
@@ -321,7 +318,6 @@ tasks:
 MULTI
 SADD blueque_started_tasks_[QUEUE] "[LISTENER ID] [PID] [TASK ID]"
 HMSET blueque_task_[TASK ID] status started pid [PID]
-HGET blueque_task_[TASK ID] parameters
 EXEC
 ```
 

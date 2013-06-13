@@ -116,9 +116,7 @@ class TestRedisQueue(unittest.TestCase):
 
         pipeline.execute.return_value = [1, True, "some parameter"]
 
-        parameters = self.queue.start("some_task", "some_node", 4321)
-
-        self.assertEqual("some parameter", parameters)
+        self.queue.start("some_task", "some_node", 4321)
 
         pipeline.sadd.assert_called_with(
             "blueque_started_tasks_some.queue", "some_node 4321 some_task")
@@ -126,13 +124,10 @@ class TestRedisQueue(unittest.TestCase):
         pipeline.hmset.assert_called_with(
             "blueque_task_some_task", {"status": "started", "pid": 4321, "updated": 12.34})
 
-        pipeline.hget.assert_called_with("blueque_task_some_task", "parameters")
-
         pipeline.execute.assert_called_with()
 
         self.log_info.assert_has_calls([
-            mock.call("Blueque queue some.queue: starting task some_task on some_node, pid 4321"),
-            mock.call("Blueque queue some.queue: task some_task, parameters: some parameter")
+            mock.call("Blueque queue some.queue: starting task some_task on some_node, pid 4321")
         ])
 
     def test_complete_task(self):

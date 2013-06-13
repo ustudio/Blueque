@@ -95,15 +95,7 @@ class RedisQueue(object):
                 RedisTask.task_key(task_id),
                 {"status": "started", "pid": pid, "updated": time.time()})
 
-            pipeline.hget(RedisTask.task_key(task_id), "parameters")
-
-            results = pipeline.execute()
-
-            parameters = results[-1]
-
-            self._log("task %s, parameters: %s" % (task_id, parameters))
-
-            return parameters
+            pipeline.execute()
 
     def complete(self, task_id, node_id, pid, result):
         self._log(
