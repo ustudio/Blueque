@@ -8,6 +8,8 @@ class ForkingRunner(threading.Thread):
         self._queue = queue
         self._task_callback = task_callback
 
+        self.running = threading.Event()
+
     def fork_task(self, task):
         pid = os.fork()
 
@@ -28,6 +30,8 @@ class ForkingRunner(threading.Thread):
             os._exit(0)
 
     def run(self):
+        self.running.set()
+
         listener = self._client.get_listener(self._queue)
 
         while True:

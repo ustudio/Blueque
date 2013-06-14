@@ -42,6 +42,8 @@ class TestForkingRunner(unittest.TestCase):
         except BreakLoop:
             pass
 
+        self.assertTrue(self.runner.running.is_set())
+
         redis_queue_class.assert_called_with("some.queue", self.mock_strict_redis)
 
         mock_fork.assert_has_calls([mock.call()])
