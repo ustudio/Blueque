@@ -16,6 +16,7 @@ def do_work():
 class WorkerThread(threading.Thread):
     def __init__(self, client):
         self._client = client
+        self.running = threading.Event()
 
     def fork_task(self, task):
         pid = os.fork()
@@ -36,6 +37,8 @@ class WorkerThread(threading.Thread):
             os._exit(0)
 
     def run(self):
+        self.running.set()
+
         listener = self._client.get_listener()
 
         while True:
@@ -61,6 +64,7 @@ if __name__ == "__main__":
         while len(threads) < concurrency:
             thread = WorkerThread(client)
             thread.start()
-            # There is a race condition between here and checking if the
-            # thread is alive when the outer while loop wraps around.
+
+            thread.running.wait()
+
             threads.append(thread)
