@@ -76,15 +76,19 @@ class TestForkingRunner(unittest.TestCase):
         self.assertEqual(1234, pid)
 
     @mock.patch("os.getpid", return_value=2222)
+    @mock.patch("os.setsid")
     @mock.patch("os.fork", return_value=0)
     @mock.patch("os._exit")
-    def test_fork_task_runs_task_in_child(self, mock_exit, mock_fork, _, redis_queue_class):
+    def test_fork_task_runs_task_in_child(
+            self, mock_exit, mock_fork, mock_setsid, _, redis_queue_class):
         mock_queue = redis_queue_class.return_value
         self.task_callback.return_value = "some result"
 
         task = self._get_task()
 
         self.runner.fork_task(task)
+
+        mock_setsid.assert_called_with()
 
         mock_queue.start.assert_called_with("some_task", "some.host_1111", 2222)
 
@@ -95,9 +99,11 @@ class TestForkingRunner(unittest.TestCase):
         mock_exit.assert_called_with(0)
 
     @mock.patch("os.getpid", return_value=2222)
+    @mock.patch("os.setsid")
     @mock.patch("os.fork", return_value=0)
     @mock.patch("os._exit")
-    def test_fork_task_fails_task_on_exception(self, mock_exit, mock_fork, _, redis_queue_class):
+    def test_fork_task_fails_task_on_exception(
+            self, mock_exit, mock_fork, mock_setsid, _, redis_queue_class):
         mock_queue = redis_queue_class.return_value
 
         callback_exception = Exception("some error")
@@ -106,6 +112,8 @@ class TestForkingRunner(unittest.TestCase):
         task = self._get_task()
 
         self.runner.fork_task(task)
+
+        mock_setsid.assert_called_with()
 
         mock_queue.start.assert_called_with("some_task", "some.host_1111", 2222)
 

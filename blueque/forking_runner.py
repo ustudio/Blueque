@@ -18,6 +18,8 @@ class ForkingRunner(threading.Thread):
         if pid > 0:
             return pid
 
+        os.setsid()
+
         processor = self._client.get_processor(task)
 
         processor.start(os.getpid())
