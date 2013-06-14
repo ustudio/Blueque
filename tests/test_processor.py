@@ -1,22 +1,30 @@
-from blueque.processor import Processor
-from blueque.redis_queue import RedisQueue
+from blueque import Client
 
 import mock
 import unittest
 
 
 class TestProcessor(unittest.TestCase):
-    def setUp(self):
-        self.mock_redis_queue = mock.MagicMock(spec=RedisQueue)
+    @mock.patch("redis.StrictRedis", autospec=True)
+    @mock.patch("blueque.client.RedisQueue", autospec=True)
+    def setUp(self, mock_redis_queue_class, mock_strict_redis):
+        self.mock_redis_queue = mock_redis_queue_class.return_value
+        self.mock_strict_redis = mock_strict_redis.return_value
 
-        self.processor = Processor("host_1234", "some_task", self.mock_redis_queue)
+        self.mock_strict_redis.hgetall.return_value = {
+            "queue": "some.queue",
+            "status": "reserved",
+            "node": "host_1234",
+            "parameters": "some parameters"
+        }
+
+        self.client = Client(hostname="asdf", port=1234, db=0)
+        self.task = self.client.get_task("some_task")
+        self.processor = self.client.get_processor(self.task)
 
     def test_start_starts_processor(self):
-        self.mock_redis_queue.start.return_value = "some parameters"
+        self.processor.start(4321)
 
-        parameters = self.processor.start(4321)
-
-        self.assertEqual("some parameters", parameters)
         self.mock_redis_queue.start.assert_called_with("some_task", "host_1234", 4321)
 
     def test_complete_marks_task_completed(self):

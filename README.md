@@ -95,15 +95,10 @@ returns a `Task` object describing that task.
 ### Processor ###
 
 A Processor object provides the interface used to update a task while
-it is being processed. Processor objects will be passed to the
-`Listener.listen` callback, and do not need to be constructed manually
-for normal task execution operations.
-
-If you need to construct one for administrative purposes, the
-signature is:
+it is being processed.
 
 ```python
-processor = Processor(listener_id, task_id, redis_queue)
+processor = client.get_processor(task)
 ```
 
 #### `Processor.start` ####
