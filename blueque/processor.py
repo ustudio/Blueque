@@ -2,6 +2,7 @@ class Processor(object):
     def __init__(self, task, redis_queue):
         self._listener_id = task.node
         self._task_id = task.id
+        self._pid = task.pid
         self._redis_queue = redis_queue
 
     def start(self, pid):
