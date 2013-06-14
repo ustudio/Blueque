@@ -1,5 +1,5 @@
 from blueque import Client
-from blueque.forking_runner import ForkingRunner
+from blueque import forking_runner
 
 import mock
 import unittest
@@ -18,7 +18,7 @@ class TestForkingRunner(unittest.TestCase):
         self.task_callback = mock.Mock()
 
         self.client = Client(hostname="asdf", port=1234, db=0)
-        self.runner = ForkingRunner(self.client, "some.queue", self.task_callback)
+        self.runner = forking_runner.ForkingRunner(self.client, "some.queue", self.task_callback)
 
     def _get_task(self):
         self.mock_strict_redis.hgetall.return_value = {
@@ -115,3 +115,49 @@ class TestForkingRunner(unittest.TestCase):
             "some_task", "some.host_1111", 2222, str(callback_exception))
 
         mock_exit.assert_called_with(0)
+
+
+@mock.patch("threading.Event", autospec=True)
+@mock.patch.object(forking_runner.ForkingRunner, "start", autospec=True)
+@mock.patch.object(forking_runner.ForkingRunner, "is_alive")
+class TestRun(unittest.TestCase):
+    @mock.patch("redis.StrictRedis", autospec=True)
+    def setUp(self, strict_redis_class):
+        self.mock_strict_redis = strict_redis_class.return_value
+
+        self.task_callback = mock.Mock()
+
+        self.client = Client(hostname="asdf", port=1234, db=0)
+
+    def test_run_starts_requested_threads(self, mock_alive, mock_start, mock_event):
+        mock_alive.side_effect = BreakLoop()
+
+        try:
+            forking_runner.run(self.client, "some.queue", self.task_callback, 4)
+        except BreakLoop:
+            pass
+
+        self.assertEqual(4, mock_start.call_count)
+        self.assertEqual(4, mock_event.return_value.wait.call_count)
+
+    def test_run_concurrency_defaults_to_1(self, mock_alive, mock_start, mock_event):
+        mock_alive.side_effect = BreakLoop()
+
+        try:
+            forking_runner.run(self.client, "some.queue", self.task_callback)
+        except BreakLoop:
+            pass
+
+        self.assertEqual(1, mock_start.call_count)
+        self.assertEqual(1, mock_event.return_value.wait.call_count)
+
+    def test_run_reruns_threads_that_die(self, mock_alive, mock_start, mock_event):
+        mock_alive.side_effect = [True, False, False, True, BreakLoop()]
+
+        try:
+            forking_runner.run(self.client, "some.queue", self.task_callback, 4)
+        except BreakLoop:
+            pass
+
+        self.assertEqual(6, mock_start.call_count)
+        self.assertEqual(6, mock_event.return_value.wait.call_count)

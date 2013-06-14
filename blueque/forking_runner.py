@@ -4,6 +4,8 @@ import threading
 
 class ForkingRunner(threading.Thread):
     def __init__(self, client, queue, task_callback):
+        super(ForkingRunner, self).__init__()
+
         self._client = client
         self._queue = queue
         self._task_callback = task_callback
@@ -40,3 +42,20 @@ class ForkingRunner(threading.Thread):
             pid = self.fork_task(task)
 
             _, status = os.waitpid(pid, 0)
+
+
+def run(client, queue, task_callback, concurrency=1):
+    threads = []
+
+    while True:
+        for thread in threads:
+            if not thread.is_alive():
+                threads.remove(thread)
+
+        while len(threads) < concurrency:
+            thread = ForkingRunner(client, queue, task_callback)
+            thread.start()
+
+            thread.running.wait()
+
+            threads.append(thread)
