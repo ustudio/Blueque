@@ -135,7 +135,7 @@ class TestRedisQueue(unittest.TestCase):
 
         self.queue.complete("some_task", "some_node", 1234, "a result")
 
-        pipeline.lrem.assert_called_with("blueque_reserved_tasks_some.queue_some_node", "some_task")
+        pipeline.lrem.assert_called_with("blueque_reserved_tasks_some.queue_some_node", 1, "some_task")
         pipeline.srem.assert_called_with(
             "blueque_started_tasks_some.queue", 1, "some_node 1234 some_task")
 
@@ -159,7 +159,7 @@ class TestRedisQueue(unittest.TestCase):
 
         self.queue.fail("some_task", "some_node", 1234, "error message")
 
-        pipeline.lrem.assert_called_with("blueque_reserved_tasks_some.queue_some_node", "some_task")
+        pipeline.lrem.assert_called_with("blueque_reserved_tasks_some.queue_some_node", 1, "some_task")
         pipeline.srem.assert_called_with(
             "blueque_started_tasks_some.queue", 1, "some_node 1234 some_task")
 

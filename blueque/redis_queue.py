@@ -102,7 +102,7 @@ class RedisQueue(object):
             "completing task %s on %s, pid: %i, result: %s" % (task_id, node_id, pid, result))
 
         with self._redis.pipeline() as pipeline:
-            pipeline.lrem(self._reserved_key(node_id), task_id)
+            pipeline.lrem(self._reserved_key(node_id), 1, task_id)
             pipeline.srem(self._started_key, 1, self._running_job(node_id, pid, task_id))
 
             pipeline.hmset(
@@ -121,7 +121,7 @@ class RedisQueue(object):
         self._log("failed task %s on %s, pid: %i, error: %s" % (task_id, node_id, pid, error))
 
         with self._redis.pipeline() as pipeline:
-            pipeline.lrem(self._reserved_key(node_id), task_id)
+            pipeline.lrem(self._reserved_key(node_id), 1, task_id)
             pipeline.srem(self._started_key, 1, self._running_job(node_id, pid, task_id))
 
             pipeline.hmset(
