@@ -1,5 +1,6 @@
 import os
 import threading
+import time
 
 
 class ForkingRunner(threading.Thread):
@@ -61,3 +62,5 @@ def run(client, queue, task_callback, concurrency=1):
             thread.running.wait()
 
             threads.append(thread)
+
+        time.sleep(0)

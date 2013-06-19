@@ -125,6 +125,7 @@ class TestForkingRunner(unittest.TestCase):
         mock_exit.assert_called_with(0)
 
 
+@mock.patch("time.sleep", autospec=True)
 @mock.patch("threading.Event", autospec=True)
 @mock.patch.object(forking_runner.ForkingRunner, "start", autospec=True)
 @mock.patch.object(forking_runner.ForkingRunner, "is_alive")
@@ -137,7 +138,7 @@ class TestRun(unittest.TestCase):
 
         self.client = Client(hostname="asdf", port=1234, db=0)
 
-    def test_run_starts_requested_threads(self, mock_alive, mock_start, mock_event):
+    def test_run_starts_requested_threads(self, mock_alive, mock_start, mock_event, mock_sleep):
         mock_alive.side_effect = BreakLoop()
 
         try:
@@ -147,8 +148,9 @@ class TestRun(unittest.TestCase):
 
         self.assertEqual(4, mock_start.call_count)
         self.assertEqual(4, mock_event.return_value.wait.call_count)
+        mock_sleep.assert_called_with(0)
 
-    def test_run_concurrency_defaults_to_1(self, mock_alive, mock_start, mock_event):
+    def test_run_concurrency_defaults_to_1(self, mock_alive, mock_start, mock_event, mock_sleep):
         mock_alive.side_effect = BreakLoop()
 
         try:
@@ -159,7 +161,7 @@ class TestRun(unittest.TestCase):
         self.assertEqual(1, mock_start.call_count)
         self.assertEqual(1, mock_event.return_value.wait.call_count)
 
-    def test_run_reruns_threads_that_die(self, mock_alive, mock_start, mock_event):
+    def test_run_reruns_threads_that_die(self, mock_alive, mock_start, mock_event, mock_sleep):
         mock_alive.side_effect = [True, False, False, True, BreakLoop()]
 
         try:
