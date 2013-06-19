@@ -137,7 +137,7 @@ class TestRedisQueue(unittest.TestCase):
 
         pipeline.lrem.assert_called_with("blueque_reserved_tasks_some.queue_some_node", 1, "some_task")
         pipeline.srem.assert_called_with(
-            "blueque_started_tasks_some.queue", 1, "some_node 1234 some_task")
+            "blueque_started_tasks_some.queue", "some_node 1234 some_task")
 
         pipeline.hmset.assert_called_with(
             "blueque_task_some_task",
@@ -161,7 +161,7 @@ class TestRedisQueue(unittest.TestCase):
 
         pipeline.lrem.assert_called_with("blueque_reserved_tasks_some.queue_some_node", 1, "some_task")
         pipeline.srem.assert_called_with(
-            "blueque_started_tasks_some.queue", 1, "some_node 1234 some_task")
+            "blueque_started_tasks_some.queue", "some_node 1234 some_task")
 
         pipeline.hmset.assert_called_with(
             "blueque_task_some_task",

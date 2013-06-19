@@ -103,7 +103,7 @@ class RedisQueue(object):
 
         with self._redis.pipeline() as pipeline:
             pipeline.lrem(self._reserved_key(node_id), 1, task_id)
-            pipeline.srem(self._started_key, 1, self._running_job(node_id, pid, task_id))
+            pipeline.srem(self._started_key, self._running_job(node_id, pid, task_id))
 
             pipeline.hmset(
                 RedisTask.task_key(task_id),
@@ -122,7 +122,7 @@ class RedisQueue(object):
 
         with self._redis.pipeline() as pipeline:
             pipeline.lrem(self._reserved_key(node_id), 1, task_id)
-            pipeline.srem(self._started_key, 1, self._running_job(node_id, pid, task_id))
+            pipeline.srem(self._started_key, self._running_job(node_id, pid, task_id))
 
             pipeline.hmset(
                 RedisTask.task_key(task_id),
