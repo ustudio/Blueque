@@ -26,7 +26,7 @@ class ForkingRunner(threading.Thread):
         processor.start(os.getpid())
 
         try:
-            result = self._task_callback(task.parameters)
+            result = self._task_callback(task)
 
             processor.complete(result)
         except Exception as e:

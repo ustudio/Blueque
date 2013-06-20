@@ -92,7 +92,7 @@ class TestForkingRunner(unittest.TestCase):
 
         mock_queue.start.assert_called_with("some_task", "some.host_1111", 2222)
 
-        self.task_callback.assert_called_with("some params")
+        self.task_callback.assert_called_with(task)
 
         mock_queue.complete.assert_called_with("some_task", "some.host_1111", 2222, "some result")
 
@@ -117,7 +117,7 @@ class TestForkingRunner(unittest.TestCase):
 
         mock_queue.start.assert_called_with("some_task", "some.host_1111", 2222)
 
-        self.task_callback.assert_called_with("some params")
+        self.task_callback.assert_called_with(task)
 
         mock_queue.fail.assert_called_with(
             "some_task", "some.host_1111", 2222, str(callback_exception))
