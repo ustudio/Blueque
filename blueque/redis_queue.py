@@ -81,7 +81,7 @@ class RedisQueue(object):
             RedisTask.task_key(task_id),
             {
                 "status": "reserved",
-                "node": "some_node",
+                "node": node_id,
                 "updated": time.time()
             })
 
