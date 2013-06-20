@@ -63,4 +63,4 @@ def run(client, queue, task_callback, concurrency=1):
 
             threads.append(thread)
 
-        time.sleep(0)
+        time.sleep(1)

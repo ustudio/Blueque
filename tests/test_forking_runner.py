@@ -148,7 +148,7 @@ class TestRun(unittest.TestCase):
 
         self.assertEqual(4, mock_start.call_count)
         self.assertEqual(4, mock_event.return_value.wait.call_count)
-        mock_sleep.assert_called_with(0)
+        mock_sleep.assert_called_with(1)
 
     def test_run_concurrency_defaults_to_1(self, mock_alive, mock_start, mock_event, mock_sleep):
         mock_alive.side_effect = BreakLoop()
