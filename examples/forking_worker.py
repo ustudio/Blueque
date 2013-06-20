@@ -7,8 +7,8 @@ from blueque import forking_runner
 import time
 
 
-def do_work(parameters):
-    print parameters
+def do_work(task):
+    print task.id, task.parameters
 
     time.sleep(1000)
 
