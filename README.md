@@ -325,8 +325,8 @@ JSON-serialized result of the task, as a single atomic transaction.
 
 ```
 MULTI
-LREM blueque_reserved_tasks_[QUEUE]_[LISTENER ID] [TASK ID]
-LREM blueque_started_tasks_[QUEUE] 1 "[LISTENER ID] [PID] [TASK ID]"
+LREM blueque_reserved_tasks_[QUEUE]_[LISTENER ID] 1 [TASK ID]
+ZREM blueque_started_tasks_[QUEUE] "[LISTENER ID] [PID] [TASK ID]"
 HMSET blueque_task_[TASK ID] status complete result [RESULT]
 LPUSH blueque_complete_tasks_[QUEUE] [TASK ID]
 EXEC
@@ -342,9 +342,25 @@ JSON-serialized description of the error (see above).
 
 ```
 MULTI
-LREM blueque_reserved_tasks_[QUEUE]_[LISTENER ID] [TASK ID]
-LREM blueque_started_tasks_[QUEUE] 1 "[LISTENER ID] [PID] [TASK ID]"
+LREM blueque_reserved_tasks_[QUEUE]_[LISTENER ID] 1 [TASK ID]
+ZREM blueque_started_tasks_[QUEUE] "[LISTENER ID] [PID] [TASK ID]"
 HMSET blueque_task_[TASK ID] status failed error [ERROR]
 LPUSH blueque_failed_tasks_[QUEUE] [TASK ID]
+EXEC
+```
+
+### Delete Finished Task ###
+
+Once everybody interested in a task's result (or error) has been
+notified, the task data needs to be deleted from Redis, so that it
+does not leak data.
+
+The command to do this is slightly different, depending on whether it
+is complete or failed:
+
+```
+MULTI
+DEL blueque_task_[TASK ID]
+LREM blueque_[status]_tasks_[QUEUE] 1 [TASK ID]
 EXEC
 ```
