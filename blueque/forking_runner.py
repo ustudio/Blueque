@@ -1,5 +1,6 @@
 import os
 import random
+import sys
 import threading
 import time
 
@@ -37,6 +38,11 @@ class ForkingRunner(threading.Thread):
         except Exception as e:
             processor.fail(str(e))
         finally:
+            # _exit won't flush, so we need to, in case there are
+            # error messages we want to see.
+            sys.stdout.flush()
+            sys.stderr.flush()
+
             os._exit(0)
 
     def run(self):

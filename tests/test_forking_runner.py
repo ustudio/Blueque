@@ -1,3 +1,5 @@
+import sys
+
 from blueque import Client
 from blueque import forking_runner
 
@@ -75,13 +77,16 @@ class TestForkingRunner(unittest.TestCase):
 
         self.assertEqual(1234, pid)
 
+    @mock.patch("sys.stdout", wraps=sys.stdout)
+    @mock.patch("sys.stderr", wraps=sys.stderr)
     @mock.patch("random.seed")
     @mock.patch("os.getpid", return_value=2222)
     @mock.patch("os.setsid")
     @mock.patch("os.fork", return_value=0)
     @mock.patch("os._exit")
     def test_fork_task_runs_task_in_child(
-            self, mock_exit, mock_fork, mock_setsid, _, mock_seed, redis_queue_class):
+            self, mock_exit, mock_fork, mock_setsid, _, mock_seed, mock_stderr, mock_stdout,
+            redis_queue_class):
         mock_queue = redis_queue_class.return_value
         self.task_callback.return_value = "some result"
 
@@ -99,14 +104,20 @@ class TestForkingRunner(unittest.TestCase):
 
         mock_queue.complete.assert_called_with("some_task", "some.host_1111", 2222, "some result")
 
+        mock_stdout.flush.assert_called_with()
+        mock_stderr.flush.assert_called_with()
+
         mock_exit.assert_called_with(0)
 
+    @mock.patch("sys.stdout", wraps=sys.stdout)
+    @mock.patch("sys.stderr", wraps=sys.stderr)
     @mock.patch("os.getpid", return_value=2222)
     @mock.patch("os.setsid")
     @mock.patch("os.fork", return_value=0)
     @mock.patch("os._exit")
     def test_fork_task_fails_task_on_exception(
-            self, mock_exit, mock_fork, mock_setsid, _, redis_queue_class):
+            self, mock_exit, mock_fork, mock_setsid, _, mock_stderr, mock_stdout,
+            redis_queue_class):
         mock_queue = redis_queue_class.return_value
 
         callback_exception = Exception("some error")
@@ -124,6 +135,9 @@ class TestForkingRunner(unittest.TestCase):
 
         mock_queue.fail.assert_called_with(
             "some_task", "some.host_1111", 2222, str(callback_exception))
+
+        mock_stdout.flush.assert_called_with()
+        mock_stderr.flush.assert_called_with()
 
         mock_exit.assert_called_with(0)
 
