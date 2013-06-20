@@ -1,4 +1,5 @@
 import os
+import random
 import threading
 import time
 
@@ -18,6 +19,10 @@ class ForkingRunner(threading.Thread):
 
         if pid > 0:
             return pid
+
+        # Reseed the random number generator, since we inherited it
+        # from our parent after the fork
+        random.seed()
 
         os.setsid()
 
