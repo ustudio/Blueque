@@ -177,3 +177,33 @@ class TestRedisQueue(unittest.TestCase):
 
         self.log_info.assert_called_with(
             "Blueque queue some.queue: failed task some_task on some_node, pid: 1234, error: error message")
+
+    def test_delete_completed_task(self):
+        pipeline = self._get_pipeline()
+
+        self.queue.delete_task("some_task", "complete")
+
+        pipeline.delete.assert_called_with("blueque_task_some_task")
+        pipeline.lrem.assert_called_with("blueque_complete_tasks_some.queue", 1, "some_task")
+
+        pipeline.execute.assert_called_with()
+
+        self.log_info.assert_called_with(
+            "Blueque queue some.queue: deleting task some_task with status complete")
+
+    def test_delete_failed_task(self):
+        pipeline = self._get_pipeline()
+
+        self.queue.delete_task("some_task", "failed")
+
+        pipeline.delete.assert_called_with("blueque_task_some_task")
+        pipeline.lrem.assert_called_with("blueque_failed_tasks_some.queue", 1, "some_task")
+
+        pipeline.execute.assert_called_with()
+
+        self.log_info.assert_called_with(
+            "Blueque queue some.queue: deleting task some_task with status failed")
+
+    def test_cannot_delete_unfinished_task(self):
+        with self.assertRaisesRegexp(ValueError, "Cannot delete task with status started"):
+            self.queue.delete_task("some_task", "started")

@@ -14,6 +14,9 @@ class RedisQueue(object):
         self._started_key = self._key("started_tasks", self._name)
         self._listeners_key = self._key("listeners", self._name)
 
+        self._complete_key = self._key("complete_tasks", self._name)
+        self._failed_key = self._key("failed_tasks", self._name)
+
         self._redis = redis_client
 
     def _running_job(self, node_id, pid, task_id):
@@ -113,7 +116,7 @@ class RedisQueue(object):
                     "updated": time.time()
                 })
 
-            pipeline.lpush(self._key("complete_tasks", self._name), task_id)
+            pipeline.lpush(self._complete_key, task_id)
 
             pipeline.execute()
 
@@ -132,6 +135,22 @@ class RedisQueue(object):
                     "updated": time.time()
                 })
 
-            pipeline.lpush(self._key("failed_tasks", self._name), task_id)
+            pipeline.lpush(self._failed_key, task_id)
+
+            pipeline.execute()
+
+    def delete_task(self, task_id, task_status):
+        if task_status == "complete":
+            finished_queue = self._complete_key
+        elif task_status == "failed":
+            finished_queue = self._failed_key
+        else:
+            raise ValueError("Cannot delete task with status %s" % (task_status))
+
+        self._log("deleting task %s with status %s" % (task_id, task_status))
+
+        with self._redis.pipeline() as pipeline:
+            pipeline.delete(RedisTask.task_key(task_id))
+            pipeline.lrem(finished_queue, 1, task_id)
 
             pipeline.execute()
