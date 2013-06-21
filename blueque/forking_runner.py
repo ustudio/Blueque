@@ -22,14 +22,18 @@ class ForkingRunner(threading.Thread):
         if pid > 0:
             return pid
 
+        logging.info("Process forked to run task %s" % (task.id))
+
         # Reseed the random number generator, since we inherited it
         # from our parent after the fork
         random.seed()
 
         os.setsid()
 
+        logging.info("Getting Processor to run task %s" % (task.id))
         processor = self._client.get_processor(task)
 
+        logging.info("Starting to run task %s" % (task.id))
         processor.start(os.getpid())
 
         try:
