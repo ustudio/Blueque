@@ -2,11 +2,10 @@ import logging
 import os
 import random
 import sys
-import threading
 import time
 
 
-class ForkingRunner(threading.Thread):
+class ForkingRunner(object):
     def __init__(self, client, queue, task_callback):
         super(ForkingRunner, self).__init__()
 
@@ -14,7 +13,20 @@ class ForkingRunner(threading.Thread):
         self._queue = queue
         self._task_callback = task_callback
 
-        self.running = threading.Event()
+    def start(self):
+        pid = os.fork()
+
+        if pid > 0:
+            self._watcher_pid = pid
+            return
+
+        try:
+            self.run()
+        finally:
+            os._exit(0)
+
+    def is_alive(self):
+        return os.waitpid(self._watcher_pid, os.WNOHANG)[0] == 0
 
     def fork_task(self, task):
         pid = os.fork()
@@ -51,8 +63,6 @@ class ForkingRunner(threading.Thread):
             os._exit(0)
 
     def run(self):
-        self.running.set()
-
         listener = self._client.get_listener(self._queue)
 
         while True:
@@ -79,8 +89,6 @@ def run(client, queue, task_callback, concurrency=1):
         while len(threads) < concurrency:
             thread = ForkingRunner(client, queue, task_callback)
             thread.start()
-
-            thread.running.wait()
 
             threads.append(thread)
 
