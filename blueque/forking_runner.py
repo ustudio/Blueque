@@ -1,3 +1,4 @@
+import logging
 import os
 import random
 import sys
@@ -55,7 +56,12 @@ class ForkingRunner(threading.Thread):
 
             pid = self.fork_task(task)
 
+            logging.info("Forked task %s to pid %i" % (task.id, pid))
+
             _, status = os.waitpid(pid, 0)
+
+            logging.info(
+                "Forked task %s exited with status %i" % (task.id, os.WEXITSTATUS(status)))
 
 
 def run(client, queue, task_callback, concurrency=1):

@@ -31,9 +31,11 @@ class TestForkingRunner(unittest.TestCase):
 
         return self.client.get_task("some_task")
 
+    @mock.patch("logging.info")
     @mock.patch("os.fork", return_value=1234)
     @mock.patch("os.waitpid", return_value=(1234, 0))
-    def test_run_listens_for_and_forks_task(self, mock_waitpid, mock_fork, redis_queue_class):
+    def test_run_listens_for_and_forks_task(
+            self, mock_waitpid, mock_fork, mock_info, redis_queue_class):
         mock_queue = redis_queue_class.return_value
 
         mock_queue.dequeue.side_effect = ["some_task", BreakLoop()]
@@ -50,6 +52,11 @@ class TestForkingRunner(unittest.TestCase):
 
         mock_fork.assert_has_calls([mock.call()])
         mock_waitpid.assert_has_calls([mock.call(1234, 0)])
+
+        mock_info.assert_has_calls([
+            mock.call("Forked task some_task to pid 1234"),
+            mock.call("Forked task some_task exited with status 0")
+        ])
 
     @mock.patch("os.fork", side_effect=[1234, 4321])
     @mock.patch("os.waitpid", side_effect=[(1234, 0), (4321, 0)])
