@@ -38,3 +38,14 @@ class TestQueue(unittest.TestCase):
         self.queue.delete_task(task)
 
         self.mock_redis_queue.delete_task.assert_called_with("some_task", "complete")
+
+    def test_delete_errors_on_wrong_queue(self):
+        self.mock_strict_redis.return_value.hgetall.return_value = {
+            "status": "complete",
+            "queue": "other.queue"
+        }
+
+        task = self.client.get_task("some_task")
+
+        with self.assertRaisesRegexp(ValueError, "Task some_task is not in queue some.queue"):
+            self.queue.delete_task(task)
