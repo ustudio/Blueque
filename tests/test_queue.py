@@ -26,3 +26,15 @@ class TestQueue(unittest.TestCase):
         task_id = self.queue.enqueue("the parameters")
 
         self.assertEqual("task_id", task_id)
+
+    def test_delete_deletes_task(self):
+        self.mock_strict_redis.return_value.hgetall.return_value = {
+            "status": "complete",
+            "queue": "some.queue"
+        }
+
+        task = self.client.get_task("some_task")
+
+        self.queue.delete_task(task)
+
+        self.mock_redis_queue.delete_task.assert_called_with("some_task", "complete")
