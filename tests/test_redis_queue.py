@@ -36,7 +36,7 @@ class TestRedisQueue(unittest.TestCase):
         self.queue.add_listener("some_node")
 
         pipeline.sadd.assert_called_with("blueque_listeners_some.queue", "some_node")
-        pipeline.zincrby.assert_called_with("blueque_queues", 1, "some.queue")
+        pipeline.zincrby.assert_called_with("blueque_queues", "some.queue", amount=1)
 
         pipeline.execute.assert_called_with()
 
@@ -47,7 +47,7 @@ class TestRedisQueue(unittest.TestCase):
 
         self.queue.remove_listener("some_node")
 
-        pipeline.zincrby.assert_called_with("blueque_queues", -1, "some.queue")
+        pipeline.zincrby.assert_called_with("blueque_queues", "some.queue", amount=-1)
         pipeline.srem.assert_called_with("blueque_listeners_some.queue", "some_node")
 
         pipeline.execute.assert_called_with()
@@ -71,7 +71,7 @@ class TestRedisQueue(unittest.TestCase):
                 "updated": 12.34
             })
 
-        pipeline.zincrby.assert_called_with("blueque_queues", 0, "some.queue")
+        pipeline.zincrby.assert_called_with("blueque_queues", "some.queue", amount=0)
         pipeline.lpush.assert_called_with(
             "blueque_pending_tasks_some.queue", "12345678-1234-1234-1234-123456781234")
         pipeline.execute.assert_called_with()

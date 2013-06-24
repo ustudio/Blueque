@@ -35,13 +35,13 @@ class RedisQueue(object):
         self._log("adding listener %s" % (node_id))
         with self._redis.pipeline() as pipeline:
             pipeline.sadd(self._listeners_key, node_id)
-            pipeline.zincrby(self._queues_key, 1, self._name)
+            pipeline.zincrby(self._queues_key, self._name, amount=1)
             pipeline.execute()
 
     def remove_listener(self, node_id):
         self._log("removing listener %s" % (node_id))
         with self._redis.pipeline() as pipeline:
-            pipeline.zincrby(self._queues_key, -1, self._name)
+            pipeline.zincrby(self._queues_key, self._name, amount=-1)
             pipeline.srem(self._listeners_key, node_id)
             pipeline.execute()
 
@@ -62,7 +62,7 @@ class RedisQueue(object):
                     "updated": now
                 })
 
-            pipeline.zincrby(self._key("queues"), 0, self._name)
+            pipeline.zincrby(self._key("queues"), self._name, amount=0)
             pipeline.lpush(self._pending_name, task_id)
 
             pipeline.execute()
