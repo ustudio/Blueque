@@ -80,6 +80,8 @@ class RedisQueue(object):
 
             pipeline.execute()
 
+        return task_id
+
     def enqueue(self, parameters):
         with self._redis.pipeline() as pipeline:
             task_id = self._generate_task(pipeline, "pending", parameters)

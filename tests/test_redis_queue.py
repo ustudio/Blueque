@@ -211,7 +211,9 @@ class TestRedisQueue(unittest.TestCase):
     def test_schedule_task(self):
         pipeline = self._get_pipeline()
 
-        self.queue.schedule("some parameters", 13.5)
+        task_id = self.queue.schedule("some parameters", 13.5)
+
+        self.assertEqual("12345678-1234-1234-1234-123456781234", task_id)
 
         pipeline.hmset.assert_called_with(
             "blueque_task_12345678-1234-1234-1234-123456781234",
