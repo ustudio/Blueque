@@ -77,7 +77,7 @@ class TestRedisQueue(unittest.TestCase):
         pipeline.execute.assert_called_with()
 
         self.log_info.assert_called_with(
-            "Blueque queue some.queue: adding task 12345678-1234-1234-1234-123456781234, parameters: some parameter")
+            "Blueque queue some.queue: adding pending task 12345678-1234-1234-1234-123456781234, parameters: some parameter")
 
     def test_dequeue(self):
         self.mock_redis.rpoplpush.return_value = "1234"
@@ -207,3 +207,30 @@ class TestRedisQueue(unittest.TestCase):
     def test_cannot_delete_unfinished_task(self):
         with self.assertRaisesRegexp(ValueError, "Cannot delete task with status started"):
             self.queue.delete_task("some_task", "started")
+
+    def test_schedule_task(self):
+        pipeline = self._get_pipeline()
+
+        self.queue.schedule("some parameters", 13.5)
+
+        pipeline.hmset.assert_called_with(
+            "blueque_task_12345678-1234-1234-1234-123456781234",
+            {
+                "status": "scheduled",
+                "queue": "some.queue",
+                "parameters": "some parameters",
+                "eta": 13.5,
+                "created": 12.34,
+                "updated": 12.34
+            }
+        )
+
+        pipeline.zincrby.assert_called_with("blueque_queues", "some.queue", amount=0)
+
+        pipeline.zadd.assert_called_with(
+            "blueque_scheduled_tasks_some.queue", 13.5, "12345678-1234-1234-1234-123456781234")
+
+        pipeline.execute.assert_called_with()
+
+        self.log_info.assert_called_with(
+            "Blueque queue some.queue: adding scheduled task 12345678-1234-1234-1234-123456781234, parameters: some parameters")
