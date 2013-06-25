@@ -73,6 +73,9 @@ class RedisQueue(object):
         return task_id
 
     def schedule(self, parameters, eta):
+        if eta < time.time():
+            return self.enqueue(parameters)
+
         with self._redis.pipeline() as pipeline:
             task_id = self._generate_task(pipeline, "scheduled", parameters, eta=eta)
 

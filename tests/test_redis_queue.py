@@ -236,3 +236,15 @@ class TestRedisQueue(unittest.TestCase):
 
         self.log_info.assert_called_with(
             "Blueque queue some.queue: adding scheduled task 12345678-1234-1234-1234-123456781234, parameters: some parameters")
+
+    def test_schedule_with_past_eta_just_enqueues(self):
+        self.queue.enqueue = mock.Mock()
+        self.queue.enqueue.return_value = "some_task"
+
+        task_id = self.queue.schedule("some parameters", 1.0)
+
+        self.assertEqual("some_task", task_id)
+
+        self.queue.enqueue.assert_called_with("some parameters")
+
+        self.assertFalse(self._get_pipeline().zadd.called)
