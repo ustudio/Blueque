@@ -179,7 +179,8 @@ Current fields are
 
 * `status`
 
-	One of: `pending`, `reserved`, `started`, `complete` or `failed`.
+	One of: `scheduled`, `pending`, `reserved`, `started`, `complete`
+    or `failed`.
 
 * `queue`
 
@@ -221,6 +222,11 @@ Current fields are
 
 	A floating point value containing the Python timestamp
     (`time.time()`) of the last time any value in the task changed.
+
+* `eta`
+
+	The timestamp when the task is scheduled to be executed. Will not
+    be set if the task was not scheduled with an ETA.
 
 ### Listeners ###
 
@@ -364,3 +370,36 @@ DEL blueque_task_[TASK ID]
 LREM blueque_[status]_tasks_[QUEUE] 1 [TASK ID]
 EXEC
 ```
+
+### Schedule Task ###
+
+A task can be scheduled for execution at a later time by adding it to
+a sorted set, where the score is the timestamp when the task should be
+executed.
+
+```
+HMSET blueque_task_[TASK ID] status scheduled queue [QUEUE] parameters [PARAMS] eta [TIMESTAMP]
+ZINCRBY blueque_queues 0 [QUEUE]
+ZADD blueque_scheduled_tasks_[QUEUE] [TIMESTAMP] [TASK ID]
+```
+
+### Enqueue Scheduled Tasks ###
+
+A process must be running which periodically checks the scheduled task
+list for each queue and adds them to the queue to be run at the
+scheduled time.
+
+```
+WATCH blueque_scheduled_tasks_[QUEUE]
+to_run = ZRANGEBYSCORE blueque_scheduled_tasks_[QUEUE] 0 [CURRENT TIME]
+MULTI
+ZREMRANGEBYSCORE blueque_scheduled_tasks_[QUEUE] 0 [CURRENT TIME]
+LPUSH blueque_pending_tasks_[QUEUE] to_run[0] ... to_run[n]
+for task in to_run:
+    HMSET blueque_task_[TASK ID] status pending
+EXEC
+```
+
+Note that `[CURRENT TIME]` should only be read once, before executing
+the transaction, so that the same tasks which were fetched are the
+ones that are removed.
