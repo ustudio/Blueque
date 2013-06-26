@@ -9,6 +9,9 @@ class Queue(object):
     def schedule(self, parameters, eta):
         return self._redis_queue.schedule(parameters, eta)
 
+    def enqueue_due_tasks(self):
+        self._redis_queue.enqueue_due_tasks()
+
     def delete_task(self, task):
         if task.queue != self._name:
             raise ValueError("Task %s is not in queue %s" % (task.id, self._name))

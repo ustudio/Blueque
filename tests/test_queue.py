@@ -36,6 +36,11 @@ class TestQueue(unittest.TestCase):
         self.assertEqual("task_id", task_id)
         self.mock_redis_queue.schedule.assert_called_with("some parameters", 24.3)
 
+    def test_enqueue_due_tasks_enqueues_due_tasks(self):
+        self.queue.enqueue_due_tasks()
+
+        self.mock_redis_queue.enqueue_due_tasks.assert_called_with()
+
     def test_delete_deletes_task(self):
         self.mock_strict_redis.return_value.hgetall.return_value = {
             "status": "complete",
