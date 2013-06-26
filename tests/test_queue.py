@@ -26,6 +26,15 @@ class TestQueue(unittest.TestCase):
         task_id = self.queue.enqueue("the parameters")
 
         self.assertEqual("task_id", task_id)
+        self.mock_redis_queue.enqueue.assert_called_with("the parameters")
+
+    def test_schedule_schedules_task(self):
+        self.mock_redis_queue.schedule.return_value = "task_id"
+
+        task_id = self.queue.schedule("some parameters", 24.3)
+
+        self.assertEqual("task_id", task_id)
+        self.mock_redis_queue.schedule.assert_called_with("some parameters", 24.3)
 
     def test_delete_deletes_task(self):
         self.mock_strict_redis.return_value.hgetall.return_value = {
