@@ -100,6 +100,9 @@ class RedisQueue(object):
             now = time.time()
             due_tasks = pipeline.zrangebyscore(self._scheduled_key, 0, now)
 
+            if len(due_tasks) == 0:
+                return
+
             pipeline.multi()
 
             pipeline.zremrangebyscore(self._scheduled_key, 0, now)

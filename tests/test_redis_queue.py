@@ -279,3 +279,24 @@ class TestRedisQueue(unittest.TestCase):
             mock.call("blueque_task_some_task", {"status": "pending", "updated": 10}),
             mock.call("blueque_task_other_task", {"status": "pending", "updated": 10})
         ])
+
+    def test_enqueue_due_does_nothing_when_nothing_is_due(self):
+        pipeline = mock.MagicMock(spec=redis.client.StrictPipeline)
+
+        pipeline.zrangebyscore.return_value = []
+
+        self.mock_redis.transaction.side_effect = lambda c, *args: c(pipeline)
+
+        # make sure that we're snapshotting the current time, instead
+        # of calling it multiple times.
+        self.mock_time.side_effect = [10, 11, 12, 13]
+
+        self.queue.enqueue_due_tasks()
+
+        # don't care about the first argument, just that we're watching the right keys
+        self.assertEqual(1, self.mock_redis.transaction.call_count)
+        self.assertEqual(
+            ("blueque_scheduled_tasks_some.queue",),
+            self.mock_redis.transaction.call_args[0][1:])
+
+        self.assertFalse(pipeline.zremrangebyscore.called)
