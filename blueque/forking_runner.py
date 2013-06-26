@@ -57,6 +57,7 @@ class ForkingRunner(object):
         finally:
             # _exit won't flush, so we need to, in case there are
             # error messages we want to see.
+            logging.shutdown()
             sys.stdout.flush()
             sys.stderr.flush()
 

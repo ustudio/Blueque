@@ -126,6 +126,7 @@ class TestForkingRunner(unittest.TestCase):
 
         self.assertEqual(1234, pid)
 
+    @mock.patch("logging.shutdown")
     @mock.patch("sys.stdout", wraps=sys.stdout)
     @mock.patch("sys.stderr", wraps=sys.stderr)
     @mock.patch("random.seed")
@@ -135,7 +136,7 @@ class TestForkingRunner(unittest.TestCase):
     @mock.patch("os._exit")
     def test_fork_task_runs_task_in_child(
             self, mock_exit, mock_fork, mock_setsid, _, mock_seed, mock_stderr, mock_stdout,
-            redis_queue_class):
+            mock_log_shutdown, redis_queue_class):
         mock_queue = redis_queue_class.return_value
         self.task_callback.return_value = "some result"
 
@@ -153,11 +154,13 @@ class TestForkingRunner(unittest.TestCase):
 
         mock_queue.complete.assert_called_with("some_task", "some.host_1111", 2222, "some result")
 
+        mock_log_shutdown.assert_called_with()
         mock_stdout.flush.assert_called_with()
         mock_stderr.flush.assert_called_with()
 
         mock_exit.assert_called_with(0)
 
+    @mock.patch("logging.shutdown")
     @mock.patch("sys.stdout", wraps=sys.stdout)
     @mock.patch("sys.stderr", wraps=sys.stderr)
     @mock.patch("os.getpid", return_value=2222)
@@ -166,7 +169,7 @@ class TestForkingRunner(unittest.TestCase):
     @mock.patch("os._exit")
     def test_fork_task_fails_task_on_exception(
             self, mock_exit, mock_fork, mock_setsid, _, mock_stderr, mock_stdout,
-            redis_queue_class):
+            mock_log_shutdown, redis_queue_class):
         mock_queue = redis_queue_class.return_value
 
         callback_exception = Exception("some error")
@@ -185,6 +188,7 @@ class TestForkingRunner(unittest.TestCase):
         mock_queue.fail.assert_called_with(
             "some_task", "some.host_1111", 2222, str(callback_exception))
 
+        mock_log_shutdown.assert_called_with()
         mock_stdout.flush.assert_called_with()
         mock_stderr.flush.assert_called_with()
 
