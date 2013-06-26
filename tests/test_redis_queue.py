@@ -15,7 +15,7 @@ class TestRedisQueue(unittest.TestCase):
         self.uuid_patch.start()
 
         self.time_patch = mock.patch("time.time", return_value=12.34)
-        self.time_patch.start()
+        self.mock_time = self.time_patch.start()
 
         self.log_info_patch = mock.patch("logging.info", autospec=True)
         self.log_info = self.log_info_patch.start()
@@ -248,3 +248,34 @@ class TestRedisQueue(unittest.TestCase):
         self.queue.enqueue.assert_called_with("some parameters")
 
         self.assertFalse(self._get_pipeline().zadd.called)
+
+    def test_enqueue_due_enqueues_all_due_tasks(self):
+        pipeline = mock.MagicMock(spec=redis.client.StrictPipeline)
+
+        pipeline.zrangebyscore.return_value = ["some_task", "other_task"]
+
+        self.mock_redis.transaction.side_effect = lambda c, *args: c(pipeline)
+
+        # make sure that we're snapshotting the current time, instead
+        # of calling it multiple times.
+        self.mock_time.side_effect = [10, 11, 12, 13]
+
+        self.queue.enqueue_due_tasks()
+
+        # don't care about the first argument, just that we're watching the right keys
+        self.assertEqual(1, self.mock_redis.transaction.call_count)
+        self.assertEqual(
+            ("blueque_scheduled_tasks_some.queue",),
+            self.mock_redis.transaction.call_args[0][1:])
+
+        pipeline.zrangebyscore.assert_called_with("blueque_scheduled_tasks_some.queue", 0, 10)
+
+        pipeline.multi.assert_called_with()
+        pipeline.zremrangebyscore.assert_called_with("blueque_scheduled_tasks_some.queue", 0, 10)
+        pipeline.lpush.assert_called_with(
+            "blueque_pending_tasks_some.queue", "some_task", "other_task")
+
+        pipeline.hmset.assert_has_calls([
+            mock.call("blueque_task_some_task", {"status": "pending", "updated": 10}),
+            mock.call("blueque_task_other_task", {"status": "pending", "updated": 10})
+        ])

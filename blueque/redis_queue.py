@@ -95,6 +95,21 @@ class RedisQueue(object):
 
         return task_id
 
+    def enqueue_due_tasks(self):
+        def enqueue_transaction(pipeline):
+            now = time.time()
+            due_tasks = pipeline.zrangebyscore(self._scheduled_key, 0, now)
+
+            pipeline.multi()
+
+            pipeline.zremrangebyscore(self._scheduled_key, 0, now)
+            pipeline.lpush(self._pending_name, *due_tasks)
+
+            for task in due_tasks:
+                pipeline.hmset(RedisTask.task_key(task), {"status": "pending", "updated": now})
+
+        self._redis.transaction(enqueue_transaction, self._scheduled_key)
+
     def dequeue(self, node_id):
         self._log("reserving task on %s" % (node_id))
 
