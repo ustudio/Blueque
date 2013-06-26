@@ -280,6 +280,9 @@ class TestRedisQueue(unittest.TestCase):
             mock.call("blueque_task_other_task", {"status": "pending", "updated": 10})
         ])
 
+        self.log_info.assert_called_with(
+            "Blueque queue some.queue: enqueuing due tasks: ['some_task', 'other_task']")
+
     def test_enqueue_due_does_nothing_when_nothing_is_due(self):
         pipeline = mock.MagicMock(spec=redis.client.StrictPipeline)
 
@@ -300,3 +303,5 @@ class TestRedisQueue(unittest.TestCase):
             self.mock_redis.transaction.call_args[0][1:])
 
         self.assertFalse(pipeline.zremrangebyscore.called)
+
+        self.log_info.assert_called_with("Blueque queue some.queue: no due tasks")

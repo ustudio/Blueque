@@ -101,7 +101,10 @@ class RedisQueue(object):
             due_tasks = pipeline.zrangebyscore(self._scheduled_key, 0, now)
 
             if len(due_tasks) == 0:
+                self._log("no due tasks")
                 return
+
+            self._log("enqueuing due tasks: %s" % (due_tasks))
 
             pipeline.multi()
 
