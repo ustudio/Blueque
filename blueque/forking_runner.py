@@ -77,20 +77,3 @@ class ForkingRunner(object):
 
             logging.info(
                 "Forked task %s exited with status %i" % (task.id, os.WEXITSTATUS(status)))
-
-
-def run(client, queue, task_callback, concurrency=1):
-    threads = []
-
-    while True:
-        for thread in threads:
-            if not thread.is_alive():
-                threads.remove(thread)
-
-        while len(threads) < concurrency:
-            thread = ForkingRunner(client, queue, task_callback)
-            thread.start()
-
-            threads.append(thread)
-
-        time.sleep(1)

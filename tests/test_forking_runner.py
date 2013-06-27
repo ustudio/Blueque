@@ -32,49 +32,6 @@ class TestForkingRunner(unittest.TestCase):
 
         return self.client.get_task("some_task")
 
-    @mock.patch("os._exit")
-    @mock.patch("os.fork", return_value=0)
-    def test_start_forks_a_new_process_and_calls_run(self, mock_fork, mock_exit, _):
-        with mock.patch.object(self.runner, "run") as mock_run:
-            self.runner.start()
-
-            mock_fork.assert_called_with()
-            mock_run.assert_called_with()
-            mock_exit.assert_called_with(0)
-
-    @mock.patch("os.waitpid", return_value=(0, 0))
-    @mock.patch("os.fork", return_value=1111)
-    def test_start_forks_and_is_alive_returns_true(self, mock_fork, mock_wait, _):
-        with mock.patch.object(self.runner, "run"):
-            self.runner.start()
-
-            is_alive = self.runner.is_alive()
-
-            self.assertTrue(is_alive)
-            mock_wait.assert_called_with(1111, os.WNOHANG)
-
-    @mock.patch("os.waitpid", return_value=(1111, 0))
-    @mock.patch("os.fork", return_value=1111)
-    def test_is_alive_returns_false_on_success(self, mock_fork, mock_wait, _):
-        with mock.patch.object(self.runner, "run"):
-            self.runner.start()
-
-            is_alive = self.runner.is_alive()
-
-            self.assertFalse(is_alive)
-            mock_wait.assert_called_with(1111, os.WNOHANG)
-
-    @mock.patch("os.waitpid", return_value=(1111, 1))
-    @mock.patch("os.fork", return_value=1111)
-    def test_is_alive_returns_false_on_failure(self, mock_fork, mock_wait, _):
-        with mock.patch.object(self.runner, "run"):
-            self.runner.start()
-
-            is_alive = self.runner.is_alive()
-
-            self.assertFalse(is_alive)
-            mock_wait.assert_called_with(1111, os.WNOHANG)
-
     @mock.patch("logging.info")
     @mock.patch("os.fork", return_value=1234)
     @mock.patch("os.waitpid", return_value=(1234, 0))
@@ -193,47 +150,3 @@ class TestForkingRunner(unittest.TestCase):
         mock_stderr.flush.assert_called_with()
 
         mock_exit.assert_called_with(0)
-
-
-@mock.patch("time.sleep", autospec=True)
-@mock.patch.object(forking_runner.ForkingRunner, "start", autospec=True)
-@mock.patch.object(forking_runner.ForkingRunner, "is_alive")
-class TestRun(unittest.TestCase):
-    @mock.patch("redis.StrictRedis", autospec=True)
-    def setUp(self, strict_redis_class):
-        self.mock_strict_redis = strict_redis_class.return_value
-
-        self.task_callback = mock.Mock()
-
-        self.client = Client(hostname="asdf", port=1234, db=0)
-
-    def test_run_starts_requested_threads(self, mock_alive, mock_start, mock_sleep):
-        mock_alive.side_effect = BreakLoop()
-
-        try:
-            forking_runner.run(self.client, "some.queue", self.task_callback, 4)
-        except BreakLoop:
-            pass
-
-        self.assertEqual(4, mock_start.call_count)
-        mock_sleep.assert_called_with(1)
-
-    def test_run_concurrency_defaults_to_1(self, mock_alive, mock_start, mock_sleep):
-        mock_alive.side_effect = BreakLoop()
-
-        try:
-            forking_runner.run(self.client, "some.queue", self.task_callback)
-        except BreakLoop:
-            pass
-
-        self.assertEqual(1, mock_start.call_count)
-
-    def test_run_reruns_threads_that_die(self, mock_alive, mock_start, mock_sleep):
-        mock_alive.side_effect = [True, False, False, True, BreakLoop()]
-
-        try:
-            forking_runner.run(self.client, "some.queue", self.task_callback, 4)
-        except BreakLoop:
-            pass
-
-        self.assertEqual(6, mock_start.call_count)
