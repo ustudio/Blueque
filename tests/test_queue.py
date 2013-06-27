@@ -1,166 +1,65 @@
-from blueque.queue import Queue
+from blueque import Client
 
 import mock
-import redis
 import unittest
 
 
 class TestQueue(unittest.TestCase):
-    def setUp(self):
-        self.mock_redis = mock.MagicMock(spec=redis.StrictRedis)
+    @mock.patch("redis.StrictRedis", autospec=True)
+    @mock.patch("blueque.client.RedisQueue", autospec=True)
+    def setUp(self, mock_redis_queue_class, mock_strict_redis):
+        self.mock_strict_redis = mock_strict_redis
 
-        self.uuid_patch = mock.patch("uuid.uuid4", return_value="1234567890")
-        self.uuid_patch.start()
+        self.mock_redis_queue_class = mock_redis_queue_class
+        self.mock_redis_queue = mock_redis_queue_class.return_value
 
-        self.time_patch = mock.patch("time.time", return_value=12.34)
-        self.time_patch.start()
+        self.client = Client("asdf", 1234, 0)
+        self.queue = self.client.get_queue("some.queue")
 
-        self.log_info_patch = mock.patch("logging.info", autospec=True)
-        self.log_info = self.log_info_patch.start()
+    def test_name_passed_to_redis_queue(self):
+        self.mock_redis_queue_class.assert_called_with(
+            "some.queue", self.mock_strict_redis.return_value)
 
-        self.queue = Queue("some.queue", self.mock_redis)
+    def test_enqueue_enqueues_task(self):
+        self.mock_redis_queue.enqueue.return_value = "task_id"
 
-    def tearDown(self):
-        self.uuid_patch.stop()
-        self.time_patch.stop()
-        self.log_info_patch.stop()
+        task_id = self.queue.enqueue("the parameters")
 
-    def _get_pipeline(self):
-        return self.mock_redis.pipeline.return_value.__enter__.return_value
+        self.assertEqual("task_id", task_id)
+        self.mock_redis_queue.enqueue.assert_called_with("the parameters")
 
-    def test_add_listener(self):
-        pipeline = self._get_pipeline()
+    def test_schedule_schedules_task(self):
+        self.mock_redis_queue.schedule.return_value = "task_id"
 
-        self.queue.add_listener("some_node")
+        task_id = self.queue.schedule("some parameters", 24.3)
 
-        pipeline.sadd.assert_called_with("blueque_listeners_some.queue", "some_node")
-        pipeline.zincrby.assert_called_with("blueque_queues", 1, "some.queue")
+        self.assertEqual("task_id", task_id)
+        self.mock_redis_queue.schedule.assert_called_with("some parameters", 24.3)
 
-        pipeline.execute.assert_called_with()
+    def test_enqueue_due_tasks_enqueues_due_tasks(self):
+        self.queue.enqueue_due_tasks()
 
-        self.log_info.assert_called_with("Blueque queue some.queue: adding listener some_node")
+        self.mock_redis_queue.enqueue_due_tasks.assert_called_with()
 
-    def test_remove_listener(self):
-        pipeline = self._get_pipeline()
+    def test_delete_deletes_task(self):
+        self.mock_strict_redis.return_value.hgetall.return_value = {
+            "status": "complete",
+            "queue": "some.queue"
+        }
 
-        self.queue.remove_listener("some_node")
+        task = self.client.get_task("some_task")
 
-        pipeline.zincrby.assert_called_with("blueque_queues", -1, "some.queue")
-        pipeline.srem.assert_called_with("blueque_listeners_some.queue", "some_node")
+        self.queue.delete_task(task)
 
-        pipeline.execute.assert_called_with()
+        self.mock_redis_queue.delete_task.assert_called_with("some_task", "complete")
 
-        self.log_info.assert_called_with("Blueque queue some.queue: removing listener some_node")
+    def test_delete_errors_on_wrong_queue(self):
+        self.mock_strict_redis.return_value.hgetall.return_value = {
+            "status": "complete",
+            "queue": "other.queue"
+        }
 
-    def test_enqueue(self):
-        pipeline = self._get_pipeline()
+        task = self.client.get_task("some_task")
 
-        task_id = self.queue.enqueue("some parameter")
-
-        self.assertEqual("1234567890", task_id)
-
-        pipeline.hmset.assert_called_with(
-            "blueque_task_1234567890",
-            {
-                "status": "pending",
-                "queue": "some.queue",
-                "parameters": "some parameter",
-                "created": 12.34,
-                "updated": 12.34
-            })
-
-        pipeline.zincrby.assert_called_with("blueque_queues", 0, "some.queue")
-        pipeline.lpush.assert_called_with("blueque_pending_tasks_some.queue", "1234567890")
-        pipeline.execute.assert_called_with()
-
-        self.log_info.assert_called_with(
-            "Blueque queue some.queue: adding task 1234567890, parameters: some parameter")
-
-    def test_dequeue(self):
-        self.mock_redis.rpoplpush.return_value = "1234"
-
-        task_id = self.queue.dequeue("some_node")
-
-        self.assertEqual("1234", task_id)
-
-        self.mock_redis.rpoplpush.assert_called_with(
-            "blueque_pending_tasks_some.queue", "blueque_reserved_tasks_some.queue_some_node")
-        self.mock_redis.hmset.assert_called_with(
-            "blueque_task_1234", {"status": "reserved", "node": "some_node", "updated": 12.34})
-
-        self.log_info.assert_has_calls([
-            mock.call("Blueque queue some.queue: reserving task on some_node"),
-            mock.call("Blueque queue some.queue: got task 1234")
-        ])
-
-    def test_start_task(self):
-        pipeline = self._get_pipeline()
-
-        pipeline.execute.return_value = [1, True, "some parameter"]
-
-        parameters = self.queue.start("some_task", "some_node", 4321)
-
-        self.assertEqual("some parameter", parameters)
-
-        pipeline.sadd.assert_called_with(
-            "blueque_started_tasks_some.queue", "some_node 4321 some_task")
-
-        pipeline.hmset.assert_called_with(
-            "blueque_task_some_task", {"status": "started", "pid": 4321, "updated": 12.34})
-
-        pipeline.hget.assert_called_with("blueque_task_some_task", "parameters")
-
-        pipeline.execute.assert_called_with()
-
-        self.log_info.assert_has_calls([
-            mock.call("Blueque queue some.queue: starting task some_task on some_node, pid 4321"),
-            mock.call("Blueque queue some.queue: task some_task, parameters: some parameter")
-        ])
-
-    def test_complete_task(self):
-        pipeline = self._get_pipeline()
-
-        self.queue.complete("some_task", "some_node", 1234, "a result")
-
-        pipeline.lrem.assert_called_with("blueque_reserved_tasks_some.queue_some_node", "some_task")
-        pipeline.srem.assert_called_with(
-            "blueque_started_tasks_some.queue", 1, "some_node 1234 some_task")
-
-        pipeline.hmset.assert_called_with(
-            "blueque_task_some_task",
-            {
-                "status": "complete",
-                "result": "a result",
-                "updated": 12.34
-            })
-
-        pipeline.lpush.assert_called_with("blueque_complete_tasks_some.queue", "some_task")
-
-        pipeline.execute.assert_called_with()
-
-        self.log_info.assert_called_with(
-            "Blueque queue some.queue: completing task some_task on some_node, pid: 1234, result: a result")
-
-    def test_fail_task(self):
-        pipeline = self._get_pipeline()
-
-        self.queue.fail("some_task", "some_node", 1234, "error message")
-
-        pipeline.lrem.assert_called_with("blueque_reserved_tasks_some.queue_some_node", "some_task")
-        pipeline.srem.assert_called_with(
-            "blueque_started_tasks_some.queue", 1, "some_node 1234 some_task")
-
-        pipeline.hmset.assert_called_with(
-            "blueque_task_some_task",
-            {
-                "status": "failed",
-                "error": "error message",
-                "updated": 12.34
-            })
-
-        pipeline.lpush.assert_called_with("blueque_failed_tasks_some.queue", "some_task")
-
-        pipeline.execute.assert_called_with()
-
-        self.log_info.assert_called_with(
-            "Blueque queue some.queue: failed task some_task on some_node, pid: 1234, error: error message")
+        with self.assertRaisesRegexp(ValueError, "Task some_task is not in queue some.queue"):
+            self.queue.delete_task(task)

@@ -21,12 +21,108 @@ tasks.
 
 * *Listener*
 
-	A process running on a node, listening for new tasks on a single queue.
+	A process running on a node, listening for new tasks on a single
+    queue. The system does not support multiple listeners listening to
+    the *same queue* on the *same node*.
 
 * *Process*
 
 	A process, running on a *node*, created by a *listener*, executing
     a *task*.
+
+## API ##
+
+### Client Connection ###
+
+The `Blueque.Client` object stores the connection to the Blueque
+system, and constructs the other objects necessary for interacting
+with the system
+
+```python
+client = Blueque.Client(hostname, port, db)
+```
+
+### Queue ###
+
+The `Blueque.queue.Queue` object provides the interface to a named
+queue of tasks.
+
+```python
+queue = client.get_queue("some.queue")
+```
+
+#### `Queue.enqueue` ####
+
+```python
+task_id = queue.enqueue(parameters)
+```
+
+Returns the Task ID (a string) of the newly enqueued task
+
+### Task ###
+
+The task object provides a basic, read-only view of all the attributes
+of a task.
+
+```python
+task = client.get_task(task_id)
+```
+
+There is a read-only attribute for all of the task attributes stored
+in Redis (see below).
+
+### Listener ###
+
+The listener object provides the interface used to listen for new
+tasks.
+
+```python
+listener = client.get_listener("some.queue")
+```
+
+#### `Listener.listen` ####
+
+```python
+task = listener.listen(on_new_task)
+```
+
+Blocks listening for a new task to execute until one is ready, then
+returns a `Task` object describing that task.
+
+
+### Processor ###
+
+A Processor object provides the interface used to update a task while
+it is being processed.
+
+```python
+processor = client.get_processor(task)
+```
+
+#### `Processor.start` ####
+
+```python
+parameters = processor.start(pid)
+```
+
+Marks a task as being started, by the specified pid, and returns the
+parameters of that task.
+
+#### `Processor.complete` ####
+
+```python
+processor.complete("some result")
+```
+
+Marks a task as being complete, and stores the result.
+
+#### `Processor.fail` ####
+
+```python
+processor.fail("some error")
+```
+
+Marks a task as having failed, and stores the error.
 
 ## Data Storage ##
 
@@ -43,13 +139,13 @@ Stored in a `List`, accessed as a queue: new tasks are added via
 for each task queue (channel). All that is stored in the `List` is a
 task ID, which will be used to retrieve the task data.
 
-### Node Task List ###
+### Listener Task List ###
 
-`blueque_reserved_tasks_[queue name]_[node name]`
+`blueque_reserved_tasks_[queue name]_[listener ID]`
 
-Stored in a `List`, this is used to keep track of which nodes are
+Stored in a `List`, this is used to keep track of which listeners are
 running which tasks. Tasks should be atomically moved from the *Task
-Queue* to the *Node Task List* via `RPOPLPUSH`, so that they don't get
+Queue* to the *Listener Task List* via `RPOPLPUSH`, so that they don't get
 lost.
 
 ### Task Channel ###
@@ -83,7 +179,8 @@ Current fields are
 
 * `status`
 
-	One of: `pending`, `reserved`, `started`, `complete` or `failed`.
+	One of: `scheduled`, `pending`, `reserved`, `started`, `complete`
+    or `failed`.
 
 * `queue`
 
@@ -107,7 +204,7 @@ Current fields are
 
 * `node`
 
-	The node ID of the node running the task. Will not be set if the
+	The listener ID of the node running the task. Will not be set if the
     task has not been started yet.
 
 * `pid`
@@ -126,20 +223,21 @@ Current fields are
 	A floating point value containing the Python timestamp
     (`time.time()`) of the last time any value in the task changed.
 
+* `eta`
+
+	The timestamp when the task is scheduled to be executed. Will not
+    be set if the task was not scheduled with an ETA.
+
 ### Listeners ###
 
 `blueque_listeners_[queue name]`
 
 In order for the system to be easily introspected, the currently
-active listeners will be stored in a Redis `Set`.
+active listeners will be stored in a Redis `Set`. Listeners are stored
+by their `LISTENER ID`, which must be `[hostname]_[pid]`.
 
-TODO: should the "ID" be the hostname or IP address of the node, so
-that they are more easily identified?
-
-TODO: should nodes be required to post a "heartbeat" back to their
-node key? If so, we could monitor that they are alive, but we would
-need to decide how they post back: would the process function be
-responsible for posting back while it is running?
+Note that this means that all hosts in the system must have unique
+names.
 
 ### Queues ###
 
@@ -217,9 +315,8 @@ tasks:
 
 ```
 MULTI
-SADD blueque_started_tasks_[QUEUE] "[NODE ID] [PID] [TASK ID]"
+SADD blueque_started_tasks_[QUEUE] "[LISTENER ID] [PID] [TASK ID]"
 HMSET blueque_task_[TASK ID] status started pid [PID]
-HGET blueque_task_[TASK ID] parameters
 EXEC
 ```
 
@@ -234,8 +331,8 @@ JSON-serialized result of the task, as a single atomic transaction.
 
 ```
 MULTI
-LREM blueque_reserved_tasks_[QUEUE]_[NODE ID] [TASK ID]
-LREM blueque_started_tasks_[QUEUE] 1 "[NODE ID] [PID] [TASK ID]"
+LREM blueque_reserved_tasks_[QUEUE]_[LISTENER ID] 1 [TASK ID]
+ZREM blueque_started_tasks_[QUEUE] "[LISTENER ID] [PID] [TASK ID]"
 HMSET blueque_task_[TASK ID] status complete result [RESULT]
 LPUSH blueque_complete_tasks_[QUEUE] [TASK ID]
 EXEC
@@ -251,9 +348,58 @@ JSON-serialized description of the error (see above).
 
 ```
 MULTI
-LREM blueque_reserved_tasks_[QUEUE]_[NODE ID] [TASK ID]
-LREM blueque_started_tasks_[QUEUE] 1 "[NODE ID] [PID] [TASK ID]"
+LREM blueque_reserved_tasks_[QUEUE]_[LISTENER ID] 1 [TASK ID]
+ZREM blueque_started_tasks_[QUEUE] "[LISTENER ID] [PID] [TASK ID]"
 HMSET blueque_task_[TASK ID] status failed error [ERROR]
 LPUSH blueque_failed_tasks_[QUEUE] [TASK ID]
 EXEC
 ```
+
+### Delete Finished Task ###
+
+Once everybody interested in a task's result (or error) has been
+notified, the task data needs to be deleted from Redis, so that it
+does not leak data.
+
+The command to do this is slightly different, depending on whether it
+is complete or failed:
+
+```
+MULTI
+DEL blueque_task_[TASK ID]
+LREM blueque_[status]_tasks_[QUEUE] 1 [TASK ID]
+EXEC
+```
+
+### Schedule Task ###
+
+A task can be scheduled for execution at a later time by adding it to
+a sorted set, where the score is the timestamp when the task should be
+executed.
+
+```
+HMSET blueque_task_[TASK ID] status scheduled queue [QUEUE] parameters [PARAMS] eta [TIMESTAMP]
+ZINCRBY blueque_queues 0 [QUEUE]
+ZADD blueque_scheduled_tasks_[QUEUE] [TIMESTAMP] [TASK ID]
+```
+
+### Enqueue Scheduled Tasks ###
+
+A process must be running which periodically checks the scheduled task
+list for each queue and adds them to the queue to be run at the
+scheduled time.
+
+```
+WATCH blueque_scheduled_tasks_[QUEUE]
+to_run = ZRANGEBYSCORE blueque_scheduled_tasks_[QUEUE] 0 [CURRENT TIME]
+MULTI
+ZREMRANGEBYSCORE blueque_scheduled_tasks_[QUEUE] 0 [CURRENT TIME]
+LPUSH blueque_pending_tasks_[QUEUE] to_run[0] ... to_run[n]
+for task in to_run:
+    HMSET blueque_task_[TASK ID] status pending
+EXEC
+```
+
+Note that `[CURRENT TIME]` should only be read once, before executing
+the transaction, so that the same tasks which were fetched are the
+ones that are removed.
