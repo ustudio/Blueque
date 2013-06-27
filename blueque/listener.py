@@ -3,6 +3,8 @@ import time
 
 class Listener(object):
     def __init__(self, name, queue, task_factory):
+        super(Listener, self).__init__()
+
         self._name = name
         self._queue = queue
         self._queue.add_listener(name)

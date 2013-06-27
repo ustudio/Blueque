@@ -7,6 +7,8 @@ import uuid
 
 class RedisQueue(object):
     def __init__(self, name, redis_client):
+        super(RedisQueue, self).__init__()
+
         self._name = name
         self._pending_name = self._key("pending_tasks", self._name)
         self._scheduled_key = self._key("scheduled_tasks", self._name)

@@ -1,5 +1,7 @@
 class RedisTask(object):
     def __init__(self, id, redis):
+        super(RedisTask, self).__init__()
+
         self._id = id
         self._redis = redis
         self._task_key = self.task_key(self._id)

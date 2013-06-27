@@ -1,5 +1,7 @@
 class Processor(object):
     def __init__(self, task, redis_queue):
+        super(Processor, self).__init__()
+
         self._listener_id = task.node
         self._task_id = task.id
         self._pid = task.pid

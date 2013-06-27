@@ -12,6 +12,8 @@ import socket
 
 class Client(object):
     def __init__(self, hostname, port, db):
+        super(Client, self).__init__()
+
         self._redis = redis.StrictRedis(host=hostname, port=port, db=db)
 
     def get_queue(self, name):

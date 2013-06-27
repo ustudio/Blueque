@@ -1,5 +1,7 @@
 class Task(object):
     def __init__(self, id, redis_task):
+        super(Task, self).__init__()
+
         self._id = id
         self._attributes = redis_task.get_task_data()
 

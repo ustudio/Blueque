@@ -1,5 +1,7 @@
 class Queue(object):
     def __init__(self, name, redis_queue):
+        super(Queue, self).__init__()
+
         self._name = name
         self._redis_queue = redis_queue
 
