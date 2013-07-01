@@ -272,8 +272,10 @@ class TestRedisQueue(unittest.TestCase):
 
         pipeline.multi.assert_called_with()
         pipeline.zremrangebyscore.assert_called_with("blueque_scheduled_tasks_some.queue", 0, 10)
-        pipeline.lpush.assert_called_with(
-            "blueque_pending_tasks_some.queue", "some_task", "other_task")
+        pipeline.lpush.assert_has_calls([
+            mock.call("blueque_pending_tasks_some.queue", "some_task"),
+            mock.call("blueque_pending_tasks_some.queue", "other_task")
+        ])
 
         pipeline.hmset.assert_has_calls([
             mock.call("blueque_task_some_task", {"status": "pending", "updated": 10}),

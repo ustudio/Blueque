@@ -111,9 +111,9 @@ class RedisQueue(object):
             pipeline.multi()
 
             pipeline.zremrangebyscore(self._scheduled_key, 0, now)
-            pipeline.lpush(self._pending_name, *due_tasks)
 
             for task in due_tasks:
+                pipeline.lpush(self._pending_name, task)
                 pipeline.hmset(RedisTask.task_key(task), {"status": "pending", "updated": now})
 
         self._redis.transaction(enqueue_transaction, self._scheduled_key)
