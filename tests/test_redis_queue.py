@@ -71,6 +71,8 @@ class TestRedisQueue(unittest.TestCase):
                 "updated": 12.34
             })
 
+        pipeline.sadd.assert_called_with(
+            "blueque_all_tasks_some.queue", "12345678-1234-1234-1234-123456781234")
         pipeline.zincrby.assert_called_with("blueque_queues", "some.queue", amount=0)
         pipeline.lpush.assert_called_with(
             "blueque_pending_tasks_some.queue", "12345678-1234-1234-1234-123456781234")
@@ -185,6 +187,7 @@ class TestRedisQueue(unittest.TestCase):
 
         pipeline.delete.assert_called_with("blueque_task_some_task")
         pipeline.lrem.assert_called_with("blueque_complete_tasks_some.queue", 1, "some_task")
+        pipeline.srem.assert_called_with("blueque_all_tasks_some.queue", "some_task")
 
         pipeline.execute.assert_called_with()
 
@@ -198,6 +201,7 @@ class TestRedisQueue(unittest.TestCase):
 
         pipeline.delete.assert_called_with("blueque_task_some_task")
         pipeline.lrem.assert_called_with("blueque_failed_tasks_some.queue", 1, "some_task")
+        pipeline.srem.assert_called_with("blueque_all_tasks_some.queue", "some_task")
 
         pipeline.execute.assert_called_with()
 
@@ -227,6 +231,8 @@ class TestRedisQueue(unittest.TestCase):
             }
         )
 
+        pipeline.sadd.assert_called_with(
+            "blueque_all_tasks_some.queue", "12345678-1234-1234-1234-123456781234")
         pipeline.zincrby.assert_called_with("blueque_queues", "some.queue", amount=0)
 
         pipeline.zadd.assert_called_with(

@@ -12,6 +12,7 @@ class RedisQueue(object):
         self._name = name
         self._pending_name = self._key("pending_tasks", self._name)
         self._scheduled_key = self._key("scheduled_tasks", self._name)
+        self._all_tasks_key = self._key("all_tasks", self._name)
 
         self._queues_key = self._key("queues")
         self._started_key = self._key("started_tasks", self._name)
@@ -70,6 +71,7 @@ class RedisQueue(object):
 
         pipeline.hmset(RedisTask.task_key(task_id), task_data)
 
+        pipeline.sadd(self._all_tasks_key, task_id)
         pipeline.zincrby(self._key("queues"), self._name, amount=0)
 
         return task_id
@@ -201,5 +203,6 @@ class RedisQueue(object):
         with self._redis.pipeline() as pipeline:
             pipeline.delete(RedisTask.task_key(task_id))
             pipeline.lrem(finished_queue, 1, task_id)
+            pipeline.srem(self._all_tasks_key, task_id)
 
             pipeline.execute()

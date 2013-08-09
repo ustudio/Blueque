@@ -265,6 +265,7 @@ parameters, [PARAMS], and then executing:
 ```
 MULTI
 HMSET blueque_task_[TASK ID] status pending queue [QUEUE] parameters [PARAMS]
+SADD blueque_all_tasks_[QUEUE] [TASK ID]
 ZINCRBY blueque_queues 0 [QUEUE]
 LPUSH blueque_pending_tasks_[QUEUE] [TASK ID]
 EXEC
@@ -368,6 +369,7 @@ is complete or failed:
 MULTI
 DEL blueque_task_[TASK ID]
 LREM blueque_[status]_tasks_[QUEUE] 1 [TASK ID]
+SREM blueque_all_tasks_[QUEUE] [TASK ID]
 EXEC
 ```
 
@@ -379,6 +381,7 @@ executed.
 
 ```
 HMSET blueque_task_[TASK ID] status scheduled queue [QUEUE] parameters [PARAMS] eta [TIMESTAMP]
+SADD blueque_all_tasks_[QUEUE] [TASK ID]
 ZINCRBY blueque_queues 0 [QUEUE]
 ZADD blueque_scheduled_tasks_[QUEUE] [TIMESTAMP] [TASK ID]
 ```
