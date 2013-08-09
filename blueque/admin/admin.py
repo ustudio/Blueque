@@ -9,5 +9,5 @@ class Admin(object):
         queue_ranks = self._redis.zrange("blueque_queues", 0, -1, withscores=True)
 
         return dict(
-            map(lambda (name, rank): (name, QueueAdmin(name, rank)), queue_ranks)
+            map(lambda (name, rank): (name, QueueAdmin(self._redis, name, rank)), queue_ranks)
         )
