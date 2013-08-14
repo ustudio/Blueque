@@ -43,14 +43,28 @@ class TestRedisQueue(unittest.TestCase):
         self.log_info.assert_called_with("Blueque queue some.queue: adding listener some_node")
 
     def test_remove_listener(self):
-        pipeline = self._get_pipeline()
+        self.mock_redis.srem.return_value = 1
 
-        self.queue.remove_listener("some_node")
+        removed = self.queue.remove_listener("some_node")
 
-        pipeline.zincrby.assert_called_with("blueque_queues", "some.queue", amount=-1)
-        pipeline.srem.assert_called_with("blueque_listeners_some.queue", "some_node")
+        self.assertEqual(1, removed, "Returns one removed listener")
 
-        pipeline.execute.assert_called_with()
+        self.mock_redis.zincrby.assert_called_with("blueque_queues", "some.queue", amount=-1)
+        self.mock_redis.srem.assert_called_with("blueque_listeners_some.queue", "some_node")
+
+        self.log_info.assert_has_calls([
+            mock.call("Blueque queue some.queue: removing listener some_node"),
+            mock.call("Blueque queue some.queue: removed listener")])
+
+    def test_remove_missing_listener(self):
+        self.mock_redis.srem.return_value = 0
+
+        removed = self.queue.remove_listener("some_node")
+
+        self.assertEqual(0, removed, "Returns no nodes removed")
+
+        self.mock_redis.zincrby.assert_not_called()
+        self.mock_redis.srem.assert_called_with("blueque_listeners_some.queue", "some_node")
 
         self.log_info.assert_called_with("Blueque queue some.queue: removing listener some_node")
 

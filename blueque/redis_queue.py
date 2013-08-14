@@ -46,10 +46,14 @@ class RedisQueue(object):
 
     def remove_listener(self, node_id):
         self._log("removing listener %s" % (node_id))
-        with self._redis.pipeline() as pipeline:
-            pipeline.zincrby(self._queues_key, self._name, amount=-1)
-            pipeline.srem(self._listeners_key, node_id)
-            pipeline.execute()
+
+        removed = self._redis.srem(self._listeners_key, node_id)
+
+        if removed > 0:
+            self._log("removed listener")
+            self._redis.zincrby(self._queues_key, self._name, amount=-1)
+
+        return removed
 
     def _generate_task(self, pipeline, status, parameters, **kwargs):
         task_id = self._generate_task_id()
