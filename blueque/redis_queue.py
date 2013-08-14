@@ -55,6 +55,9 @@ class RedisQueue(object):
 
         return removed
 
+    def get_listeners(self):
+        return self._redis.smembers(self._listeners_key)
+
     def _generate_task(self, pipeline, status, parameters, **kwargs):
         task_id = self._generate_task_id()
 

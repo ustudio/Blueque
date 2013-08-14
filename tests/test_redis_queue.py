@@ -68,6 +68,14 @@ class TestRedisQueue(unittest.TestCase):
 
         self.log_info.assert_called_with("Blueque queue some.queue: removing listener some_node")
 
+    def test_get_listeners(self):
+        self.mock_redis.smembers.return_value = ["some-listener_1234", "other-listener_4321"]
+
+        listeners = self.queue.get_listeners()
+
+        self.mock_redis.smembers.assert_called_with("blueque_listeners_some.queue")
+        self.assertEqual(["some-listener_1234", "other-listener_4321"], listeners)
+
     def test_enqueue(self):
         pipeline = self._get_pipeline()
 
