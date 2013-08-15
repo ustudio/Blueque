@@ -1,6 +1,7 @@
 from blueque import Client
 
 import mock
+import os
 import unittest
 
 
@@ -46,3 +47,57 @@ class TestListener(unittest.TestCase):
         mock_sleep.assert_has_calls([mock.call(1)])
 
         self.assertEqual("some_task", task.id)
+
+    def test_claim_orphan_returns_none_when_there_are_no_listeners(self):
+        self.mock_redis_queue.get_listeners.return_value = []
+
+        claimed = self.listener.claim_orphan()
+
+        self.mock_redis_queue.get_listeners.assert_called_with()
+        self.assertIsNone(claimed)
+
+    @mock.patch("os.kill")
+    def test_claim_orphan_returns_none_when_there_are_no_listeners_on_this_node(self, mock_kill):
+        self.mock_redis_queue.get_listeners.return_value = ["other-host_4321"]
+
+        claimed = self.listener.claim_orphan()
+
+        self.mock_redis_queue.get_listeners.assert_called_with()
+        self.assertIsNone(claimed)
+
+        mock_kill.assert_not_called()
+
+    @mock.patch("os.kill")
+    def test_claim_orphan_returns_none_when_listener_is_self(self, mock_kill):
+        self.mock_redis_queue.get_listeners.return_value = ["somehost.example.com_2314"]
+
+        claimed = self.listener.claim_orphan()
+
+        self.mock_redis_queue.get_listeners.assert_called_with()
+        self.assertIsNone(claimed)
+
+        mock_kill.assert_not_called()
+
+    @mock.patch("os.kill", return_value=None)
+    def test_claim_orphan_returns_none_when_listener_is_running(self, mock_kill):
+        self.mock_redis_queue.get_listeners.return_value = ["somehost.example.com_4321"]
+
+        claimed = self.listener.claim_orphan()
+
+        self.mock_redis_queue.get_listeners.assert_called_with()
+        self.assertIsNone(claimed)
+
+        mock_kill.assert_called_with(4321, 0)
+
+    @mock.patch("os.kill", side_effect=OSError)
+    def test_claim_orphan_returns_none_when_orphan_claimed(self, mock_kill):
+        self.mock_redis_queue.get_listeners.return_value = ["somehost.example.com_4321"]
+        self.mock_redis_queue.remove_listener.return_value = 0
+
+        claimed = self.listener.claim_orphan()
+
+        self.mock_redis_queue.get_listeners.assert_called_with()
+        self.mock_redis_queue.remove_listener.assert_called_with("somehost.example.com_4321")
+        mock_kill.assert_called_with(4321, 0)
+
+        self.assertIsNone(claimed)
