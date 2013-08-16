@@ -24,9 +24,6 @@ class ForkingRunner(object):
         finally:
             os._exit(0)
 
-    def is_alive(self):
-        return os.waitpid(self._watcher_pid, os.WNOHANG)[0] == 0
-
     def fork_task(self, task):
         pid = os.fork()
 
