@@ -12,18 +12,6 @@ class ForkingRunner(object):
         self._queue = queue
         self._task_callback = task_callback
 
-    def start(self):
-        pid = os.fork()
-
-        if pid > 0:
-            self._watcher_pid = pid
-            return
-
-        try:
-            self.run()
-        finally:
-            os._exit(0)
-
     def fork_task(self, task):
         pid = os.fork()
 
