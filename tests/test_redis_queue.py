@@ -76,6 +76,26 @@ class TestRedisQueue(unittest.TestCase):
         self.mock_redis.smembers.assert_called_with("blueque_listeners_some.queue")
         self.assertEqual(["some-listener_1234", "other-listener_4321"], listeners)
 
+    def test_reclaim_task_when_empty(self):
+        self.mock_redis.lindex.return_value = None
+
+        task_id = self.queue.reclaim_task("some-listener_1", "some-listener_2")
+
+        self.mock_redis.lindex.assert_called_with(
+            "blueque_reserved_tasks_some.queue_some-listener_1", 0)
+        self.assertIsNone(task_id)
+
+    def test_reclaim_task_marks_task_reclaimed(self):
+        self.mock_redis.lindex.return_value = "some_task"
+
+        task_id = self.queue.reclaim_task("some-listener_1", "some-listener_2")
+
+        self.mock_redis.lindex.assert_called_with(
+            "blueque_reserved_tasks_some.queue_some-listener_1", 0)
+        self.mock_redis.hset.assert_called_with(
+            "blueque_task_some_task", "reclaimed_node", "some-listener_2")
+        self.assertEqual("some_task", task_id)
+
     def test_enqueue(self):
         pipeline = self._get_pipeline()
 

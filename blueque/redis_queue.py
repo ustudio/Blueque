@@ -157,13 +157,12 @@ class RedisQueue(object):
             pipeline.execute()
 
     def reclaim_task(self, old_node, new_node):
-        # lpoprpush old_node_reserved to new_node_reserved
-        # If 0, return
-        # set node_id on task hash
-        # srem old_running_job
-        # if 0 ????
-        # sadd new_running_job
-        pass
+        task_id = self._redis.lindex(self._reserved_key(old_node), 0)
+
+        if task_id is not None:
+            self._redis.hset(RedisTask.task_key(task_id), "reclaimed_node", new_node)
+
+        return task_id
 
     def complete(self, task_id, node_id, pid, result):
         self._log(
