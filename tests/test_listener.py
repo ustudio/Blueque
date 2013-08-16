@@ -101,3 +101,41 @@ class TestListener(unittest.TestCase):
         mock_kill.assert_called_with(4321, 0)
 
         self.assertIsNone(claimed)
+
+    @mock.patch("os.kill", side_effect=OSError)
+    def test_claim_orphan_returns_none_when_no_tasks_reserved(self, mock_kill):
+        self.mock_redis_queue.get_listeners.return_value = ["somehost.example.com_4321"]
+        self.mock_redis_queue.remove_listener.return_value = 1
+        self.mock_redis_queue.reclaim_task.return_value = None
+
+        claimed = self.listener.claim_orphan()
+
+        self.mock_redis_queue.get_listeners.assert_called_with()
+        self.mock_redis_queue.remove_listener.assert_called_with("somehost.example.com_4321")
+        mock_kill.assert_called_with(4321, 0)
+        self.mock_redis_queue.reclaim_task.assert_called_with(
+            "somehost.example.com_4321", "somehost.example.com_2314")
+
+        self.assertIsNone(claimed)
+
+    @mock.patch("os.kill", side_effect=OSError)
+    def test_claim_orphan_returns_task_when_reclaimed(self, mock_kill):
+        self.mock_redis_queue.get_listeners.return_value = ["somehost.example.com_4321"]
+        self.mock_redis_queue.remove_listener.return_value = 1
+        self.mock_redis_queue.reclaim_task.return_value = "some_task"
+
+        self.mock_strict_redis.return_value.hgetall.return_value = {
+            "parameters": "some parameters"
+        }
+
+        claimed = self.listener.claim_orphan()
+
+        self.mock_redis_queue.get_listeners.assert_called_with()
+        self.mock_redis_queue.remove_listener.assert_called_with("somehost.example.com_4321")
+        mock_kill.assert_called_with(4321, 0)
+        self.mock_redis_queue.reclaim_task.assert_called_with(
+            "somehost.example.com_4321", "somehost.example.com_2314")
+        self.mock_strict_redis.return_value.hgetall.assert_called_with("blueque_task_some_task")
+
+        self.assertIsNotNone(claimed)
+        self.assertEqual("some parameters", claimed.parameters)

@@ -51,4 +51,10 @@ class Listener(object):
                 # already claimed
                 continue
 
+            task_id = self._queue.reclaim_task(listener, self._name)
+            if task_id is None:
+                continue
+
+            return self._task_factory(task_id)
+
         return None
