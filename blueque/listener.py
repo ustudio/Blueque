@@ -1,3 +1,5 @@
+from blueque.process_helpers import process_running
+
 import os
 import socket
 import time
@@ -27,13 +29,6 @@ class Listener(object):
             else:
                 time.sleep(1)
 
-    def _pid_running(self, pid):
-        try:
-            os.kill(pid, 0)
-            return True
-        except OSError:
-            return False
-
     def claim_orphan(self):
         for listener in self._queue.get_listeners():
             host, pid = self._parse_name(listener)
@@ -44,7 +39,7 @@ class Listener(object):
             if pid == self._pid:
                 continue
 
-            if self._pid_running(pid):
+            if process_running(pid):
                 continue
 
             if self._queue.remove_listener(listener) == 0:
