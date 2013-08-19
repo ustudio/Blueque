@@ -10,6 +10,8 @@ title: Introducing Blueque
 
 Thomas Stephens (uStudio)
 
+"We make managing online video easy!"
+
 </div>
 </section>
 
@@ -162,6 +164,32 @@ How hard could it be?
   * It is hard to atomically update multiple keys when you don't know which keys you want to update ahead of time.
   * Redis docs say you can't use Lua to fix this.
   * We just use transactions, and make sure the first, atomic transaction is to the single authoritative source
+
+</div>
+</section>
+
+<section>
+<div markdown="1">
+
+## What is next? ##
+
+* Use pub/sub instead of polling
+
+* Build out administrative tools
+
+  * Started, but not merged in yet
+
+* Documentation on how to integrate it into your app
+
+</div>
+</section>
+
+<section>
+<div markdown="1">
+
+# Questions? #
+
+http://blueque.github.io/introducing-blueque.html
 
 </div>
 </section>
