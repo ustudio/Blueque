@@ -189,6 +189,8 @@ How hard could it be?
 
 # Questions? #
 
+http://github.com/ustudio/Blueque
+
 http://blueque.github.io/introducing-blueque.html
 
 </div>
