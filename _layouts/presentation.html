@@ -1,0 +1,36 @@
+---
+layout: default.html
+---
+<link rel="stylesheet" href="/css/lib/reveal.min.css">
+<link rel="stylesheet" href="/css/lib/reveal-themes/default.css" id="theme">
+
+<div class="reveal">
+  <div class="slides">
+    {{ content }}
+  </div>
+</div>
+
+<script src="/js/lib/head.min.js"></script>
+<script src="/js/lib/reveal.min.js"></script>
+
+<script type="text/javascript">
+  // Full list of configuration options available here:
+  // https://github.com/hakimel/reveal.js#configuration
+  Reveal.initialize({
+    controls: true,
+    progress: true,
+    history: true,
+    center: true,
+
+    theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+    transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+  // Optional libraries used to extend on reveal.js
+    dependencies: [
+      { src: '/js/lib/classList.js', condition: function() { return !document.body.classList; } },
+      { src: '/js/lib/reveal-plugins/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+      { src: '/js/lib/reveal-plugins/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+    ]
+  });
+
+</script>
