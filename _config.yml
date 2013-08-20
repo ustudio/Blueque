@@ -1,4 +1,4 @@
 markdown: kramdown
 
 kramdown:
-  use_coderay: true
+  smart_quotes: quot,quot,quot,quot
