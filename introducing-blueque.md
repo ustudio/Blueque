@@ -235,6 +235,8 @@ print task.result
 
 ## What is next? ##
 
+* ~2.5 million tasks since July
+
 * Use pub/sub instead of polling
 
 * Build out administrative tools
