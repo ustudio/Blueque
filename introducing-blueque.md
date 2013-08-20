@@ -157,6 +157,66 @@ How hard could it be?
 <section>
 <div markdown="1">
 
+## What does it look like? ##
+
+The worker:
+
+{% highlight python %}
+from blueque import Client
+from blueque import forking_runner
+    
+import time
+
+
+def do_work(task):
+    print task.id, task.parameters
+
+    time.sleep(1000)
+
+    return "result"
+
+
+if __name__ == "__main__":
+    client = Client(hostname="localhost", port=6379, db=0)
+
+    forking_runner.run(client, "some.queue", do_work, 4)
+{% endhighlight %}
+
+</div>
+</section>
+
+<section>
+<div markdown="1">
+
+## What does it look like? ##
+
+The client:
+
+{% highlight python %}
+from blueque import Client
+
+import time
+
+
+client = Client(hostname="localhost", port=6379, db=0)
+queue = client.get_queue("some.queue")
+
+task_id = queue.enqueue("some data to process")
+
+task = client.get_task(task_id)
+
+while task.status != "complete":
+    task = client.get_task(task_id)
+
+print task.result
+{% endhighlight %}
+
+</div>
+</section>
+
+<section>
+<div markdown="1">
+
 ## What was hard? ##
 
 * Atomicity!
