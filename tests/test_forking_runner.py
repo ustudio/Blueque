@@ -1,4 +1,3 @@
-import os
 import sys
 
 from blueque import Client
@@ -23,14 +22,95 @@ class TestForkingRunner(unittest.TestCase):
         self.client = Client(hostname="asdf", port=1234, db=0)
         self.runner = forking_runner.ForkingRunner(self.client, "some.queue", self.task_callback)
 
-    def _get_task(self):
-        self.mock_strict_redis.hgetall.return_value = {
+    def _get_task(self, **kwargs):
+        task_data = {
             "status": "reserved",
             "parameters": "some params",
             "node": "some.host_1111"
         }
 
+        task_data.update(kwargs)
+
+        self.mock_strict_redis.hgetall.return_value = task_data
+
         return self.client.get_task("some_task")
+
+    @mock.patch("logging.info")
+    @mock.patch("os.fork", return_value=1234)
+    @mock.patch("os.waitpid", return_value=(1234, 0))
+    def test_run_starts_unstarted_orphan(
+            self, mock_waitpid, mock_fork, mock_info, redis_queue_class):
+
+        with mock.patch.object(self.client, 'get_listener') as mock_get_listener:
+            mock_listener = mock_get_listener.return_value
+            mock_listener.listen.side_effect = BreakLoop()
+            mock_listener.claim_orphan.side_effect = [self._get_task(status="reserved"), None]
+
+            try:
+                self.runner.run()
+            except BreakLoop:
+                pass
+
+            mock_get_listener.assert_called_with("some.queue")
+            mock_listener.claim_orphan.assert_called_with()
+
+        mock_fork.assert_has_calls([mock.call()])
+        mock_waitpid.assert_has_calls([mock.call(1234, 0)])
+
+        mock_info.assert_has_calls([
+            mock.call("Forked task some_task to pid 1234"),
+            mock.call("Forked task some_task exited with status 0")
+        ])
+
+    @mock.patch("logging.info")
+    @mock.patch("os.kill", side_effect=[None, None, OSError])
+    @mock.patch("time.sleep")
+    def test_run_watches_started_orphan(
+            self, mock_sleep, mock_kill, mock_info, redis_queue_class):
+
+        with mock.patch.object(self.client, 'get_listener') as mock_get_listener:
+            mock_listener = mock_get_listener.return_value
+            mock_listener.listen.side_effect = BreakLoop()
+            mock_listener.claim_orphan.side_effect = [
+                self._get_task(status="started", pid=1111), None]
+
+            try:
+                self.runner.run()
+            except BreakLoop:
+                pass
+
+            mock_get_listener.assert_called_with("some.queue")
+            mock_listener.claim_orphan.assert_called_with()
+
+        mock_kill.assert_has_calls([
+            mock.call(1111, 0), mock.call(1111, 0), mock.call(1111, 0)])
+
+        mock_sleep.assert_has_calls([mock.call(0.1), mock.call(0.1)])
+
+    @mock.patch("logging.info")
+    @mock.patch("os.kill", side_effect=[OSError, OSError])
+    @mock.patch("time.sleep")
+    def test_run_exhausts_all_orphans(
+            self, mock_sleep, mock_kill, mock_info, redis_queue_class):
+
+        with mock.patch.object(self.client, 'get_listener') as mock_get_listener:
+            mock_listener = mock_get_listener.return_value
+            mock_listener.listen.side_effect = BreakLoop()
+            mock_listener.claim_orphan.side_effect = [
+                self._get_task(status="started", pid=1111),
+                self._get_task(status="started", pid=2222),
+                None]
+
+            try:
+                self.runner.run()
+            except BreakLoop:
+                pass
+
+            mock_get_listener.assert_called_with("some.queue")
+            mock_listener.claim_orphan.assert_has_calls([mock.call(), mock.call(), mock.call()])
+
+        mock_kill.assert_has_calls([
+            mock.call(1111, 0), mock.call(2222, 0)])
 
     @mock.patch("logging.info")
     @mock.patch("os.fork", return_value=1234)
@@ -38,6 +118,7 @@ class TestForkingRunner(unittest.TestCase):
     def test_run_listens_for_and_forks_task(
             self, mock_waitpid, mock_fork, mock_info, redis_queue_class):
         mock_queue = redis_queue_class.return_value
+        mock_queue.get_listeners.return_value = []
 
         mock_queue.dequeue.side_effect = ["some_task", BreakLoop()]
 
@@ -49,6 +130,7 @@ class TestForkingRunner(unittest.TestCase):
 
         redis_queue_class.assert_called_with("some.queue", self.mock_strict_redis)
 
+        mock_queue.get_listeners.assert_called_with()
         mock_fork.assert_has_calls([mock.call()])
         mock_waitpid.assert_has_calls([mock.call(1234, 0)])
 

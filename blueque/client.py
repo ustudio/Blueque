@@ -5,9 +5,7 @@ from blueque.redis_queue import RedisQueue
 from blueque.redis_task import RedisTask
 from blueque.task import Task
 
-import os
 import redis
-import socket
 
 
 class Client(object):
@@ -25,9 +23,8 @@ class Client(object):
         return Task(task_id, redis_task)
 
     def get_listener(self, queue_name):
-        listener_name = "_".join((socket.getfqdn(), str(os.getpid())))
         redis_queue = RedisQueue(queue_name, self._redis)
-        return Listener(listener_name, redis_queue, self.get_task)
+        return Listener(redis_queue, self.get_task)
 
     def get_processor(self, task):
         redis_queue = RedisQueue(task.queue, self._redis)

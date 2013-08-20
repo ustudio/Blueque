@@ -43,16 +43,58 @@ class TestRedisQueue(unittest.TestCase):
         self.log_info.assert_called_with("Blueque queue some.queue: adding listener some_node")
 
     def test_remove_listener(self):
-        pipeline = self._get_pipeline()
+        self.mock_redis.srem.return_value = 1
 
-        self.queue.remove_listener("some_node")
+        removed = self.queue.remove_listener("some_node")
 
-        pipeline.zincrby.assert_called_with("blueque_queues", "some.queue", amount=-1)
-        pipeline.srem.assert_called_with("blueque_listeners_some.queue", "some_node")
+        self.assertEqual(1, removed, "Returns one removed listener")
 
-        pipeline.execute.assert_called_with()
+        self.mock_redis.zincrby.assert_called_with("blueque_queues", "some.queue", amount=-1)
+        self.mock_redis.srem.assert_called_with("blueque_listeners_some.queue", "some_node")
+
+        self.log_info.assert_has_calls([
+            mock.call("Blueque queue some.queue: removing listener some_node"),
+            mock.call("Blueque queue some.queue: removed listener")])
+
+    def test_remove_missing_listener(self):
+        self.mock_redis.srem.return_value = 0
+
+        removed = self.queue.remove_listener("some_node")
+
+        self.assertEqual(0, removed, "Returns no nodes removed")
+
+        self.mock_redis.zincrby.assert_not_called()
+        self.mock_redis.srem.assert_called_with("blueque_listeners_some.queue", "some_node")
 
         self.log_info.assert_called_with("Blueque queue some.queue: removing listener some_node")
+
+    def test_get_listeners(self):
+        self.mock_redis.smembers.return_value = ["some-listener_1234", "other-listener_4321"]
+
+        listeners = self.queue.get_listeners()
+
+        self.mock_redis.smembers.assert_called_with("blueque_listeners_some.queue")
+        self.assertEqual(["some-listener_1234", "other-listener_4321"], listeners)
+
+    def test_reclaim_task_when_empty(self):
+        self.mock_redis.lindex.return_value = None
+
+        task_id = self.queue.reclaim_task("some-listener_1", "some-listener_2")
+
+        self.mock_redis.lindex.assert_called_with(
+            "blueque_reserved_tasks_some.queue_some-listener_1", 0)
+        self.assertIsNone(task_id)
+
+    def test_reclaim_task_marks_task_reclaimed(self):
+        self.mock_redis.lindex.return_value = "some_task"
+
+        task_id = self.queue.reclaim_task("some-listener_1", "some-listener_2")
+
+        self.mock_redis.lindex.assert_called_with(
+            "blueque_reserved_tasks_some.queue_some-listener_1", 0)
+        self.mock_redis.hset.assert_called_with(
+            "blueque_task_some_task", "reclaimed_node", "some-listener_2")
+        self.assertEqual("some_task", task_id)
 
     def test_enqueue(self):
         pipeline = self._get_pipeline()
