@@ -136,6 +136,8 @@ How hard could it be?
 
 * Lean on Redis for atomicity guarantees
 
+* Don't implement concurrency ourselves
+
 </div>
 </section>
 
