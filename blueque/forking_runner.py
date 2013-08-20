@@ -1,7 +1,10 @@
+from blueque.process_helpers import process_running
+
 import logging
 import os
 import random
 import sys
+import time
 
 
 class ForkingRunner(object):
@@ -11,21 +14,6 @@ class ForkingRunner(object):
         self._client = client
         self._queue = queue
         self._task_callback = task_callback
-
-    def start(self):
-        pid = os.fork()
-
-        if pid > 0:
-            self._watcher_pid = pid
-            return
-
-        try:
-            self.run()
-        finally:
-            os._exit(0)
-
-    def is_alive(self):
-        return os.waitpid(self._watcher_pid, os.WNOHANG)[0] == 0
 
     def fork_task(self, task):
         pid = os.fork()
@@ -62,17 +50,31 @@ class ForkingRunner(object):
 
             os._exit(0)
 
+    def _run_task(self, task):
+        pid = self.fork_task(task)
+
+        logging.info("Forked task %s to pid %i" % (task.id, pid))
+
+        _, status = os.waitpid(pid, 0)
+
+        logging.info(
+            "Forked task %s exited with status %i" % (task.id, os.WEXITSTATUS(status)))
+
     def run(self):
         listener = self._client.get_listener(self._queue)
+
+        task = listener.claim_orphan()
+
+        while task is not None:
+            if task.status == "reserved":
+                self._run_task(task)
+            elif task.status == "started":
+                while process_running(task.pid):
+                    time.sleep(0.1)
+
+            task = listener.claim_orphan()
 
         while True:
             task = listener.listen()
 
-            pid = self.fork_task(task)
-
-            logging.info("Forked task %s to pid %i" % (task.id, pid))
-
-            _, status = os.waitpid(pid, 0)
-
-            logging.info(
-                "Forked task %s exited with status %i" % (task.id, os.WEXITSTATUS(status)))
+            self._run_task(task)
