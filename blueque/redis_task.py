@@ -1,4 +1,13 @@
+from collections import defaultdict
+
+
 class RedisTask(object):
+    _field_types = defaultdict(lambda: str, {
+        "pid": int,
+        "created": float,
+        "updated": float
+    })
+
     def __init__(self, id, redis):
         super(RedisTask, self).__init__()
 
@@ -15,4 +24,9 @@ class RedisTask(object):
         return '_'.join(("blueque",) + args)
 
     def get_task_data(self):
-        return self._redis.hgetall(self._task_key)
+        task_data = {}
+
+        for field, value in self._redis.hgetall(self._task_key).iteritems():
+            task_data[field] = self._field_types[field](value)
+
+        return task_data

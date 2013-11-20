@@ -19,3 +19,22 @@ class TestRedisTask(unittest.TestCase):
         self.mock_redis.hgetall.assert_called_with("blueque_task_some_task")
 
         self.assertEqual({"status": "pending"}, task_data)
+
+    def test_get_task_data_converts_types(self):
+        self.mock_redis.hgetall.return_value = {
+            "status": "pending",
+            "pid": "1234",
+            "created": "23.45",
+            "updated": "34.56"
+        }
+
+        task_data = self.redis_task.get_task_data()
+
+        self.mock_redis.hgetall.assert_called_with("blueque_task_some_task")
+
+        self.assertEqual({
+            "status": "pending",
+            "pid": 1234,
+            "created": 23.45,
+            "updated": 34.56
+        }, task_data)

@@ -72,7 +72,7 @@ class TestForkingRunner(unittest.TestCase):
             mock_listener = mock_get_listener.return_value
             mock_listener.listen.side_effect = BreakLoop()
             mock_listener.claim_orphan.side_effect = [
-                self._get_task(status="started", pid=1111), None]
+                self._get_task(status="started", pid="1111"), None]
 
             try:
                 self.runner.run()
@@ -97,8 +97,8 @@ class TestForkingRunner(unittest.TestCase):
             mock_listener = mock_get_listener.return_value
             mock_listener.listen.side_effect = BreakLoop()
             mock_listener.claim_orphan.side_effect = [
-                self._get_task(status="started", pid=1111),
-                self._get_task(status="started", pid=2222),
+                self._get_task(status="started", pid="1111"),
+                self._get_task(status="started", pid="2222"),
                 None]
 
             try:
