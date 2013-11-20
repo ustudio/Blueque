@@ -11,9 +11,9 @@ FULL_TASK_DATA = {
     "result": "a result",
     "error": "no error",
     "node": "some_node",
-    "pid": 1234,
-    "created": 1234.5,
-    "updated": 4567.89
+    "pid": "1234",
+    "created": "1234.5",
+    "updated": "4567.89"
 }
 
 
