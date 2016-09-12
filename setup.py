@@ -6,7 +6,7 @@ with open("requirements.txt") as requirements_file:
                           map(lambda r: r.strip(), requirements_file.readlines()))
 
 setup(name="blueque",
-      version="0.2",
+      version="0.2.1",
       description="Simple job queuing for very long tasks",
       url="https://github.com/ustudio/Blueque",
       packages=["blueque"],
