@@ -9,10 +9,10 @@ import redis
 
 
 class Client(object):
-    def __init__(self, hostname, port, db):
+    def __init__(self, hostname, port, db, **kwargs):
         super(Client, self).__init__()
 
-        self._redis = redis.StrictRedis(host=hostname, port=port, db=db)
+        self._redis = redis.StrictRedis(host=hostname, port=port, db=db, **kwargs)
 
     def get_queue(self, name):
         redis_queue = RedisQueue(name, self._redis)
