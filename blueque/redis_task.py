@@ -26,7 +26,7 @@ class RedisTask(object):
     def get_task_data(self):
         task_data = {}
 
-        for field, value in self._redis.hgetall(self._task_key).iteritems():
+        for field, value in self._redis.hgetall(self._task_key).items():
             task_data[field] = self._field_types[field](value)
 
         return task_data

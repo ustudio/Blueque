@@ -1,6 +1,10 @@
 from blueque.redis_task import RedisTask
 
-import mock
+try:
+    from unittest import mock
+except ImportError:
+    import mock
+
 import unittest
 
 
