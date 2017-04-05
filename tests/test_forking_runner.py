@@ -3,7 +3,11 @@ import sys
 from blueque import Client
 from blueque import forking_runner
 
-import mock
+try:
+    from unittest import mock
+except ImportError:
+    import mock
+
 import unittest
 
 

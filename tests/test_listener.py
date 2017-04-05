@@ -1,7 +1,10 @@
 from blueque import Client
 
-import mock
-import os
+try:
+    from unittest import mock
+except ImportError:
+    import mock
+
 import unittest
 
 

@@ -1,6 +1,10 @@
 from blueque.redis_queue import RedisQueue
 
-import mock
+try:
+    from unittest import mock
+except ImportError:
+    import mock
+
 import redis
 import unittest
 import uuid
