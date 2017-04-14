@@ -123,7 +123,8 @@ class TestRedisQueue(unittest.TestCase):
         pipeline.execute.assert_called_with()
 
         self.log_info.assert_called_with(
-            "Blueque queue some.queue: adding pending task 12345678-1234-1234-1234-123456781234, parameters: some parameter")
+            "Blueque queue some.queue: adding pending task "
+            "12345678-1234-1234-1234-123456781234, parameters: some parameter")
 
     def test_dequeue(self):
         self.mock_redis.rpoplpush.return_value = "1234"
@@ -173,7 +174,8 @@ class TestRedisQueue(unittest.TestCase):
         pipeline.execute.assert_called_with()
 
         self.log_info.assert_has_calls([
-            mock.call("Blueque queue some.queue: starting task some_task on some_node, pid 4321")
+            mock.call(
+                "Blueque queue some.queue: starting task some_task on some_node, pid 4321")
         ])
 
     def test_complete_task(self):
@@ -181,7 +183,8 @@ class TestRedisQueue(unittest.TestCase):
 
         self.queue.complete("some_task", "some_node", 1234, "a result")
 
-        pipeline.lrem.assert_called_with("blueque_reserved_tasks_some.queue_some_node", 1, "some_task")
+        pipeline.lrem.assert_called_with(
+            "blueque_reserved_tasks_some.queue_some_node", 1, "some_task")
         pipeline.srem.assert_called_with(
             "blueque_started_tasks_some.queue", "some_node 1234 some_task")
 
@@ -198,14 +201,16 @@ class TestRedisQueue(unittest.TestCase):
         pipeline.execute.assert_called_with()
 
         self.log_info.assert_called_with(
-            "Blueque queue some.queue: completing task some_task on some_node, pid: 1234, result: a result")
+            "Blueque queue some.queue: completing task some_task on some_node, "
+            "pid: 1234, result: a result")
 
     def test_fail_task(self):
         pipeline = self._get_pipeline()
 
         self.queue.fail("some_task", "some_node", 1234, "error message")
 
-        pipeline.lrem.assert_called_with("blueque_reserved_tasks_some.queue_some_node", 1, "some_task")
+        pipeline.lrem.assert_called_with(
+            "blueque_reserved_tasks_some.queue_some_node", 1, "some_task")
         pipeline.srem.assert_called_with(
             "blueque_started_tasks_some.queue", "some_node 1234 some_task")
 
@@ -222,7 +227,8 @@ class TestRedisQueue(unittest.TestCase):
         pipeline.execute.assert_called_with()
 
         self.log_info.assert_called_with(
-            "Blueque queue some.queue: failed task some_task on some_node, pid: 1234, error: error message")
+            "Blueque queue some.queue: failed task some_task on some_node, "
+            "pid: 1234, error: error message")
 
     def test_delete_completed_task(self):
         pipeline = self._get_pipeline()
@@ -281,7 +287,8 @@ class TestRedisQueue(unittest.TestCase):
         pipeline.execute.assert_called_with()
 
         self.log_info.assert_called_with(
-            "Blueque queue some.queue: adding scheduled task 12345678-1234-1234-1234-123456781234, parameters: some parameters")
+            "Blueque queue some.queue: adding scheduled task "
+            "12345678-1234-1234-1234-123456781234, parameters: some parameters")
 
     def test_schedule_with_past_eta_just_enqueues(self):
         self.queue.enqueue = mock.Mock()
