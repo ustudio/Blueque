@@ -17,22 +17,21 @@ class TestRedisQueue(unittest.TestCase):
         self.uuid_patch = mock.patch(
             "uuid.uuid4", return_value=uuid.UUID("{12345678-1234-1234-1234-123456781234}"))
         self.uuid_patch.start()
+        self.addCleanup(self.uuid_patch.stop)
 
         self.time_patch = mock.patch("time.time", return_value=12.34)
         self.mock_time = self.time_patch.start()
+        self.addCleanup(self.time_patch.stop)
 
         self.log_info_patch = mock.patch("logging.info", autospec=True)
         self.log_info = self.log_info_patch.start()
+        self.addCleanup(self.log_info_patch.stop)
 
         self.log_debug_patch = mock.patch("logging.debug", autospec=True)
         self.log_debug = self.log_debug_patch.start()
+        self.addCleanup(self.log_debug_patch.stop)
 
         self.queue = RedisQueue("some.queue", self.mock_redis)
-
-        self.addCleanup(self.uuid_patch.stop)
-        self.addCleanup(self.time_patch.stop)
-        self.addCleanup(self.log_info_patch.stop)
-        self.addCleanup(self.log_debug_patch.stop)
 
     def _get_pipeline(self):
         return self.mock_redis.pipeline.return_value.__enter__.return_value
