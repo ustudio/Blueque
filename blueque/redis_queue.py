@@ -37,6 +37,9 @@ class RedisQueue(object):
     def _log(self, message):
         logging.info("Blueque queue %s: %s" % (self._name, message))
 
+    def _debug(self, message):
+        logging.debug("Blueque queue %s: %s" % (self._name, message))
+
     def add_listener(self, node_id):
         self._log("adding listener %s" % (node_id))
         with self._redis.pipeline() as pipeline:
@@ -110,7 +113,7 @@ class RedisQueue(object):
             due_tasks = pipeline.zrangebyscore(self._scheduled_key, 0, now)
 
             if len(due_tasks) == 0:
-                self._log("no due tasks")
+                self._debug("no due tasks")
                 return
 
             self._log("enqueuing due tasks: %s" % (due_tasks))
