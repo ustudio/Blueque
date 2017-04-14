@@ -24,12 +24,16 @@ class TestRedisQueue(unittest.TestCase):
         self.log_info_patch = mock.patch("logging.info", autospec=True)
         self.log_info = self.log_info_patch.start()
 
+        self.log_debug_patch = mock.patch("logging.debug", autospec=True)
+        self.log_debug = self.log_debug_patch.start()
+
         self.queue = RedisQueue("some.queue", self.mock_redis)
 
     def tearDown(self):
         self.uuid_patch.stop()
         self.time_patch.stop()
         self.log_info_patch.stop()
+        self.log_debug_patch.stop()
 
     def _get_pipeline(self):
         return self.mock_redis.pipeline.return_value.__enter__.return_value
@@ -359,4 +363,4 @@ class TestRedisQueue(unittest.TestCase):
 
         self.assertFalse(pipeline.zremrangebyscore.called)
 
-        self.log_info.assert_called_with("Blueque queue some.queue: no due tasks")
+        self.log_debug.assert_called_with("Blueque queue some.queue: no due tasks")
