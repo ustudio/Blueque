@@ -10,7 +10,7 @@ install_requires = [
 ]
 
 setup(name="blueque",
-      version="0.2.4",
+      version="0.2.5",
       description="Simple job queuing for very long tasks",
       url="https://github.com/ustudio/Blueque",
       packages=["blueque"],
