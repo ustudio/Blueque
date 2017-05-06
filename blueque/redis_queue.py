@@ -129,7 +129,7 @@ class RedisQueue(object):
         self._redis.transaction(enqueue_transaction, self._scheduled_key)
 
     def dequeue(self, node_id):
-        self._log("reserving task on %s" % (node_id))
+        self._debug("reserving task on %s" % (node_id))
 
         task_id = self._redis.rpoplpush(
             self._pending_name, self._reserved_key(node_id))

@@ -140,8 +140,11 @@ class TestRedisQueue(unittest.TestCase):
         self.mock_redis.hmset.assert_called_with(
             "blueque_task_1234", {"status": "reserved", "node": "some_node", "updated": 12.34})
 
+        self.log_debug.assert_has_calls([
+            mock.call("Blueque queue some.queue: reserving task on some_node")
+        ])
+
         self.log_info.assert_has_calls([
-            mock.call("Blueque queue some.queue: reserving task on some_node"),
             mock.call("Blueque queue some.queue: got task 1234")
         ])
 
@@ -156,7 +159,7 @@ class TestRedisQueue(unittest.TestCase):
             "blueque_pending_tasks_some.queue", "blueque_reserved_tasks_some.queue_some_node")
         self.mock_redis.hmset.assert_has_calls([])
 
-        self.log_info.assert_has_calls([
+        self.log_debug.assert_has_calls([
             mock.call("Blueque queue some.queue: reserving task on some_node")
         ])
 
