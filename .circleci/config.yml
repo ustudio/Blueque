@@ -9,9 +9,18 @@ jobs:
       - checkout
 
       - run:
+          name: Install Dependencies
+          command: |
+            python -m virtualenv ~/venv
+            . ~/venv/bin/activate
+            pip install tox
+            mkdir -p test-reports
+
+      - run:
           name: Run Tests
           command: |
-            tox
+            . ~/venv/bin/activate
+            tox --verbose --with-xunit --xunit-file=test-reports/nosetests.xml
 
       - store_artifacts:
           path: test-reports
@@ -20,16 +29,25 @@ jobs:
           path: test-reports
   test-35:
     docker:
-      - image: circleci/python:2.7
+      - image: circleci/python:3.5
     working_directory: ~/repo
 
     steps:
       - checkout
 
       - run:
+          name: Install Dependencies
+          command: |
+            python -m venv ~/venv
+            . ~/venv/bin/activate
+            pip install tox
+            mkdir -p test-reports
+
+      - run:
           name: Run Tests
           command: |
-            tox
+            . ~/venv/bin/activate
+            tox --verbose --with-xunit --xunit-file=test-reports/nosetests.xml
 
       - store_artifacts:
           path: test-reports
@@ -38,16 +56,25 @@ jobs:
           path: test-reports
   test-36:
     docker:
-      - image: circleci/python:2.7
+      - image: circleci/python:3.6
     working_directory: ~/repo
 
     steps:
       - checkout
 
       - run:
+          name: Install Dependencies
+          command: |
+            python -m venv ~/venv
+            . ~/venv/bin/activate
+            pip install tox
+            mkdir -p test-reports
+
+      - run:
           name: Run Tests
           command: |
-            tox
+            . ~/venv/bin/activate
+            tox --verbose --with-xunit --xunit-file=test-reports/nosetests.xml
 
       - store_artifacts:
           path: test-reports
@@ -68,7 +95,7 @@ jobs:
       - run:
           name: install dependencies
           command: |
-            python -m virtualenv ~/venv
+            python -m venv ~/venv
             . ~/venv/bin/activate
             pip install twine
 
