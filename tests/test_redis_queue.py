@@ -12,6 +12,12 @@ import uuid
 
 class TestRedisQueue(unittest.TestCase):
     def setUp(self):
+        # Backwards compatibility with python-redis pre 3.x
+        if hasattr(redis.client, "StrictPipeline"):
+            self.pipeline_spec = redis.client.StrictPipeline
+        else:
+            self.pipeline_spec = redis.client.Pipeline
+
         self.mock_redis = mock.MagicMock(spec=redis.StrictRedis)
 
         self.uuid_patch = mock.patch(
@@ -308,7 +314,7 @@ class TestRedisQueue(unittest.TestCase):
         self.assertFalse(self._get_pipeline().zadd.called)
 
     def test_enqueue_due_enqueues_all_due_tasks(self):
-        pipeline = mock.MagicMock(spec=redis.client.StrictPipeline)
+        pipeline = mock.MagicMock(spec=self.pipeline_spec)
 
         pipeline.zrangebyscore.return_value = ["some_task", "other_task"]
 
@@ -344,7 +350,7 @@ class TestRedisQueue(unittest.TestCase):
             "Blueque queue some.queue: enqueuing due tasks: ['some_task', 'other_task']")
 
     def test_enqueue_due_does_nothing_when_nothing_is_due(self):
-        pipeline = mock.MagicMock(spec=redis.client.StrictPipeline)
+        pipeline = mock.MagicMock(spec=self.pipeline_spec)
 
         pipeline.zrangebyscore.return_value = []
 
