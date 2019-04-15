@@ -38,7 +38,7 @@ class TestRedisTask(unittest.TestCase):
 
         self.assertEqual({
             "status": "pending",
-            "pid": 1234,
+            "pid": "1234",
             "created": 23.45,
             "updated": 34.56
         }, task_data)

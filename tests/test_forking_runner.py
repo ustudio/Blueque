@@ -191,11 +191,11 @@ class TestForkingRunner(unittest.TestCase):
 
         mock_setsid.assert_called_with()
 
-        mock_queue.start.assert_called_with("some_task", "some.host_1111", 2222)
+        mock_queue.start.assert_called_with("some_task", "some.host_1111", "2222")
 
         self.task_callback.assert_called_with(task)
 
-        mock_queue.complete.assert_called_with("some_task", "some.host_1111", 2222, "some result")
+        mock_queue.complete.assert_called_with("some_task", "some.host_1111", "2222", "some result")
 
         mock_log_shutdown.assert_called_with()
         mock_stdout.flush.assert_called_with()
@@ -224,12 +224,12 @@ class TestForkingRunner(unittest.TestCase):
 
         mock_setsid.assert_called_with()
 
-        mock_queue.start.assert_called_with("some_task", "some.host_1111", 2222)
+        mock_queue.start.assert_called_with("some_task", "some.host_1111", "2222")
 
         self.task_callback.assert_called_with(task)
 
         mock_queue.fail.assert_called_with(
-            "some_task", "some.host_1111", 2222, str(callback_exception))
+            "some_task", "some.host_1111", "2222", str(callback_exception))
 
         mock_log_shutdown.assert_called_with()
         mock_stdout.flush.assert_called_with()

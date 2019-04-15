@@ -67,7 +67,7 @@ class TestProcessorWithStartedTask(unittest.TestCase):
             "queue": "some.queue",
             "status": "reserved",
             "node": "host_1234",
-            "pid": 4321,
+            "pid": "4321",
             "parameters": "some parameters"
         }
 
@@ -79,10 +79,10 @@ class TestProcessorWithStartedTask(unittest.TestCase):
         self.processor.complete("some result")
 
         self.mock_redis_queue.complete.assert_called_with(
-            "some_task", "host_1234", 4321, "some result")
+            "some_task", "host_1234", "4321", "some result")
 
     def test_fail_marks_task_failed(self):
         self.processor.fail("some error")
 
         self.mock_redis_queue.fail.assert_called_with(
-            "some_task", "host_1234", 4321, "some error")
+            "some_task", "host_1234", "4321", "some error")

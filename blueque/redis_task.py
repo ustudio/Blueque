@@ -3,7 +3,6 @@ from collections import defaultdict
 
 class RedisTask(object):
     _field_types = defaultdict(lambda: str, {
-        "pid": int,
         "created": float,
         "updated": float
     })

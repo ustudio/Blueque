@@ -35,20 +35,20 @@ class RedisQueue(object):
         return str(uuid.uuid4())
 
     def _log(self, message):
-        logging.info("Blueque queue %s: %s" % (self._name, message))
+        logging.info("Blueque queue {}: {}".format(self._name, message))
 
     def _debug(self, message):
-        logging.debug("Blueque queue %s: %s" % (self._name, message))
+        logging.debug("Blueque queue {}: {}".format(self._name, message))
 
     def add_listener(self, node_id):
-        self._log("adding listener %s" % (node_id))
+        self._log("adding listener {}".format(node_id))
         with self._redis.pipeline() as pipeline:
             pipeline.sadd(self._listeners_key, node_id)
             pipeline.zincrby(self._queues_key, self._name, amount=1)
             pipeline.execute()
 
     def remove_listener(self, node_id):
-        self._log("removing listener %s" % (node_id))
+        self._log("removing listener {}".format(node_id))
 
         removed = self._redis.srem(self._listeners_key, node_id)
 
@@ -64,7 +64,7 @@ class RedisQueue(object):
     def _generate_task(self, pipeline, status, parameters, **kwargs):
         task_id = self._generate_task_id()
 
-        self._log("adding %s task %s, parameters: %s" % (status, task_id, parameters))
+        self._log("adding {} task {}, parameters: {}".format(status, task_id, parameters))
 
         now = time.time()
 
@@ -116,7 +116,7 @@ class RedisQueue(object):
                 self._debug("no due tasks")
                 return
 
-            self._log("enqueuing due tasks: %s" % (due_tasks))
+            self._log("enqueuing due tasks: {}".format(due_tasks))
 
             pipeline.multi()
 
@@ -129,7 +129,7 @@ class RedisQueue(object):
         self._redis.transaction(enqueue_transaction, self._scheduled_key)
 
     def dequeue(self, node_id):
-        self._debug("reserving task on %s" % (node_id))
+        self._debug("reserving task on {}".format(node_id))
 
         task_id = self._redis.rpoplpush(
             self._pending_name, self._reserved_key(node_id))
@@ -137,7 +137,7 @@ class RedisQueue(object):
         if task_id is None:
             return None
 
-        self._log("got task %s" % (task_id))
+        self._log("got task {}".format(task_id))
 
         self._redis.hmset(
             RedisTask.task_key(task_id),
@@ -150,7 +150,7 @@ class RedisQueue(object):
         return task_id
 
     def start(self, task_id, node_id, pid):
-        self._log("starting task %s on %s, pid %i" % (task_id, node_id, pid))
+        self._log("starting task {} on {}, pid {}".format(task_id, node_id, pid))
         with self._redis.pipeline() as pipeline:
             pipeline.sadd(self._started_key, self._running_job(node_id, pid, task_id))
             pipeline.hmset(
@@ -169,7 +169,7 @@ class RedisQueue(object):
 
     def complete(self, task_id, node_id, pid, result):
         self._log(
-            "completing task %s on %s, pid: %i, result: %s" % (task_id, node_id, pid, result))
+            "completing task {} on {}, pid: {}, result: {}".format(task_id, node_id, pid, result))
 
         with self._redis.pipeline() as pipeline:
             pipeline.lrem(self._reserved_key(node_id), 1, task_id)
@@ -188,7 +188,7 @@ class RedisQueue(object):
             pipeline.execute()
 
     def fail(self, task_id, node_id, pid, error):
-        self._log("failed task %s on %s, pid: %i, error: %s" % (task_id, node_id, pid, error))
+        self._log("failed task {} on {}, pid: {}, error: {}".format(task_id, node_id, pid, error))
 
         with self._redis.pipeline() as pipeline:
             pipeline.lrem(self._reserved_key(node_id), 1, task_id)
@@ -212,9 +212,9 @@ class RedisQueue(object):
         elif task_status == "failed":
             finished_queue = self._failed_key
         else:
-            raise ValueError("Cannot delete task with status %s" % (task_status))
+            raise ValueError("Cannot delete task with status {}".format(task_status))
 
-        self._log("deleting task %s with status %s" % (task_id, task_status))
+        self._log("deleting task {} with status {}".format(task_id, task_status))
 
         with self._redis.pipeline() as pipeline:
             pipeline.delete(RedisTask.task_key(task_id))

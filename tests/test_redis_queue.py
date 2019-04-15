@@ -174,13 +174,13 @@ class TestRedisQueue(unittest.TestCase):
 
         pipeline.execute.return_value = [1, True, "some parameter"]
 
-        self.queue.start("some_task", "some_node", 4321)
+        self.queue.start("some_task", "some_node", "4321")
 
         pipeline.sadd.assert_called_with(
             "blueque_started_tasks_some.queue", "some_node 4321 some_task")
 
         pipeline.hmset.assert_called_with(
-            "blueque_task_some_task", {"status": "started", "pid": 4321, "updated": 12.34})
+            "blueque_task_some_task", {"status": "started", "pid": "4321", "updated": 12.34})
 
         pipeline.execute.assert_called_with()
 

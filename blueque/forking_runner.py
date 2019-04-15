@@ -33,7 +33,7 @@ class ForkingRunner(object):
         processor = self._client.get_processor(task)
 
         logging.info("Starting to run task %s" % (task.id))
-        processor.start(os.getpid())
+        processor.start(str(os.getpid()))
 
         try:
             result = self._task_callback(task)
@@ -69,7 +69,7 @@ class ForkingRunner(object):
             if task.status == "reserved":
                 self._run_task(task)
             elif task.status == "started":
-                while process_running(task.pid):
+                while process_running(int(task.pid)):
                     time.sleep(0.1)
 
             task = listener.claim_orphan()

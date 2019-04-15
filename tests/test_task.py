@@ -43,7 +43,7 @@ class TestTask(unittest.TestCase):
         self.assertEqual("a result", task.result)
         self.assertEqual("no error", task.error)
         self.assertEqual("some_node", task.node)
-        self.assertEqual(1234, task.pid)
+        self.assertEqual("1234", task.pid)
         self.assertEqual(1234.5, task.created)
         self.assertEqual(4567.89, task.updated)
 
@@ -74,7 +74,7 @@ class TestTask(unittest.TestCase):
             task.node = "foo"
 
         with self.assertRaises(AttributeError):
-            task.pid = 4321
+            task.pid = "4321"
 
         with self.assertRaises(AttributeError):
             task.created = 1.2
