@@ -24,9 +24,9 @@ FULL_TASK_DATA = {
 class TestTask(unittest.TestCase):
     @mock.patch("redis.StrictRedis", autospec=True)
     def setUp(self, redis_class):
-        self.mock_redis = redis_class.return_value
+        self.mock_redis = redis_class.from_url.return_value
 
-        self.client = Client("asdf", 1234, 0)
+        self.client = Client("redis://asdf:1234")
 
     def test_can_get_task_with_all_attributes(self):
         self.mock_redis.hgetall.return_value = FULL_TASK_DATA

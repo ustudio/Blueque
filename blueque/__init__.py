@@ -1,1 +1,1 @@
-from blueque.client import Client
+from blueque.client import Client  # noqa: F401

@@ -308,7 +308,7 @@ class TestRedisQueue(unittest.TestCase):
         self.assertFalse(self._get_pipeline().zadd.called)
 
     def test_enqueue_due_enqueues_all_due_tasks(self):
-        pipeline = mock.MagicMock(spec=redis.client.StrictPipeline)
+        pipeline = mock.MagicMock(spec=redis.client.Pipeline)
 
         pipeline.zrangebyscore.return_value = ["some_task", "other_task"]
 
@@ -344,7 +344,7 @@ class TestRedisQueue(unittest.TestCase):
             "Blueque queue some.queue: enqueuing due tasks: ['some_task', 'other_task']")
 
     def test_enqueue_due_does_nothing_when_nothing_is_due(self):
-        pipeline = mock.MagicMock(spec=redis.client.StrictPipeline)
+        pipeline = mock.MagicMock(spec=redis.client.Pipeline)
 
         pipeline.zrangebyscore.return_value = []
 
