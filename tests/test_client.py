@@ -13,14 +13,13 @@ class TestClient(unittest.TestCase):
     # classes they create.
 
     @mock.patch("redis.StrictRedis", autospec=True)
-    def test_client_connects_with_requested_information(self, mock_redis):
-        self.client = Client(hostname="foo", port=1234, db=0)
+    def test_client_connects_with_requested_information(self, mock_redis_class):
+        self.client = Client("redis://url")
 
-        mock_redis.assert_called_with(host="foo", port=1234, db=0)
+        mock_redis_class.from_url.assert_called_with("redis://url")
 
     @mock.patch("redis.StrictRedis", autospec=True)
-    def test_client_passes_additional_args_to_client(self, mock_redis):
-        self.client = Client(hostname="foo", port=1234, db=0, password="password", charset="utf8")
+    def test_client_passes_additional_args_to_client(self, mock_redis_class):
+        self.client = Client("redis://url", 4, socket_timeout=5)
 
-        mock_redis.assert_called_with(
-            host="foo", port=1234, db=0, password="password", charset="utf8")
+        mock_redis_class.from_url.assert_called_with("redis://url", 4, socket_timeout=5)

@@ -14,19 +14,19 @@ class TestListener(unittest.TestCase):
     @mock.patch("redis.StrictRedis", autospec=True)
     @mock.patch("blueque.client.RedisQueue", autospec=True)
     def setUp(self, mock_redis_queue_class, mock_strict_redis, _, __):
-        self.mock_strict_redis = mock_strict_redis
+        self.mock_strict_redis = mock_strict_redis.from_url.return_value
 
         self.mock_redis_queue_class = mock_redis_queue_class
         self.mock_redis_queue = mock_redis_queue_class.return_value
 
-        self.client = Client("asdf", 1234, 0)
+        self.client = Client("redis://asdf:1234")
         self.listener = self.client.get_listener("some.queue")
 
     def test_listener_adds_itself(self):
         self.mock_redis_queue.add_listener.assert_called_with("somehost.example.com_2314")
 
     def test_listener_calls_callback_when_task_in_queue(self):
-        self.mock_strict_redis.return_value.hgetall.return_value = {
+        self.mock_strict_redis.hgetall.return_value = {
             "parameters": "some parameters"
         }
         self.mock_redis_queue.dequeue.side_effect = ["some_task"]
@@ -127,7 +127,7 @@ class TestListener(unittest.TestCase):
         self.mock_redis_queue.remove_listener.return_value = 1
         self.mock_redis_queue.reclaim_task.return_value = "some_task"
 
-        self.mock_strict_redis.return_value.hgetall.return_value = {
+        self.mock_strict_redis.hgetall.return_value = {
             "parameters": "some parameters"
         }
 
@@ -138,7 +138,7 @@ class TestListener(unittest.TestCase):
         mock_kill.assert_called_with(4321, 0)
         self.mock_redis_queue.reclaim_task.assert_called_with(
             "somehost.example.com_4321", "somehost.example.com_2314")
-        self.mock_strict_redis.return_value.hgetall.assert_called_with("blueque_task_some_task")
+        self.mock_strict_redis.hgetall.assert_called_with("blueque_task_some_task")
 
         self.assertIsNotNone(claimed)
         self.assertEqual("some parameters", claimed.parameters)

@@ -18,12 +18,12 @@ class BreakLoop(RuntimeError):
 @mock.patch("blueque.client.RedisQueue", autospec=True)
 class TestForkingRunner(unittest.TestCase):
     @mock.patch("redis.StrictRedis", autospec=True)
-    def setUp(self, strict_redis_class):
-        self.mock_strict_redis = strict_redis_class.return_value
+    def setUp(self, mock_redis_class):
+        self.mock_strict_redis = mock_redis_class.from_url.return_value
 
         self.task_callback = mock.Mock()
 
-        self.client = Client(hostname="asdf", port=1234, db=0)
+        self.client = Client("redis://asdf:1234")
         self.runner = forking_runner.ForkingRunner(self.client, "some.queue", self.task_callback)
 
     def _get_task(self, **kwargs):

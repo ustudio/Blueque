@@ -13,7 +13,7 @@ class TestProcessor(unittest.TestCase):
     @mock.patch("blueque.client.RedisQueue", autospec=True)
     def setUp(self, mock_redis_queue_class, mock_strict_redis):
         self.mock_redis_queue = mock_redis_queue_class.return_value
-        self.mock_strict_redis = mock_strict_redis.return_value
+        self.mock_strict_redis = mock_strict_redis.from_url.return_value
 
         self.mock_strict_redis.hgetall.return_value = {
             "queue": "some.queue",
@@ -22,7 +22,7 @@ class TestProcessor(unittest.TestCase):
             "parameters": "some parameters"
         }
 
-        self.client = Client(hostname="asdf", port=1234, db=0)
+        self.client = Client("redis://asdf:1234")
         self.task = self.client.get_task("some_task")
         self.processor = self.client.get_processor(self.task)
 
@@ -61,7 +61,7 @@ class TestProcessorWithStartedTask(unittest.TestCase):
     @mock.patch("blueque.client.RedisQueue", autospec=True)
     def setUp(self, mock_redis_queue_class, mock_strict_redis):
         self.mock_redis_queue = mock_redis_queue_class.return_value
-        self.mock_strict_redis = mock_strict_redis.return_value
+        self.mock_strict_redis = mock_strict_redis.from_url.return_value
 
         self.mock_strict_redis.hgetall.return_value = {
             "queue": "some.queue",
@@ -71,7 +71,7 @@ class TestProcessorWithStartedTask(unittest.TestCase):
             "parameters": "some parameters"
         }
 
-        self.client = Client(hostname="asdf", port=1234, db=0)
+        self.client = Client("redis://asdf:1234")
         self.task = self.client.get_task("some_task")
         self.processor = self.client.get_processor(self.task)
 

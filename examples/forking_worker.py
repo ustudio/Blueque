@@ -17,6 +17,6 @@ def do_work(task):
 
 
 if __name__ == "__main__":
-    client = Client(hostname="localhost", port=6379, db=0)
+    client = Client("redis://localhost")
 
     forking_runner.run(client, "some.queue", do_work, 4)
