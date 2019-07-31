@@ -6,7 +6,7 @@ except ImportError:
 
 install_requires = [
     "argparse",
-    "redis"
+    "redis<3"
 ]
 
 setup(name="blueque",
