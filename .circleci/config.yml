@@ -127,8 +127,14 @@ workflows:
   version: 2
   test-and-publish:
     jobs:
-      - test-python27
-      - test-python37
+      - test-python27:
+          filters:
+            tags:
+              only: /.*/
+      - test-python37:
+          filters:
+            tags:
+              only: /.*/
       - publish:
           requires:
             - test-python27
