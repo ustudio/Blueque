@@ -39,7 +39,7 @@ system, and constructs the other objects necessary for interacting
 with the system
 
 ```python
-client = Blueque.Client(hostname, port, db)
+client = Blueque.Client("redis://hostname:port/db")
 ```
 
 ### Queue ###
