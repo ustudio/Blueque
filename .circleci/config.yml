@@ -11,9 +11,9 @@ jobs:
 
       - restore_cache:
           keys:
-            - v1-dependencies-python27-{{ checksum "setup.py" }}-{{ checksum "requirements.txt" }}
-            - v1-dependencies-python27-{{ checksum "setup.py" }}-
-            - v1-dependencies-python27-
+            - v2-dependencies-python27-{{ checksum "setup.py" }}-{{ checksum "requirements.txt" }}
+            - v2-dependencies-python27-{{ checksum "setup.py" }}-
+            - v2-dependencies-python27-
 
       - run:
           name: Install Dependencies
@@ -27,7 +27,7 @@ jobs:
       - save_cache:
           paths:
             - ~/venv
-          key: v1-dependencies-python27-{{ checksum "setup.py" }}-{{ checksum "requirements.txt" }}
+          key: v2-dependencies-python27-{{ checksum "setup.py" }}-{{ checksum "requirements.txt" }}
 
       - run:
           name: Run Tests
@@ -58,9 +58,9 @@ jobs:
 
       - restore_cache:
           keys:
-            - v1-dependencies-python37-{{ checksum "setup.py" }}-{{ checksum "requirements.txt" }}
-            - v1-dependencies-python37-{{ checksum "setup.py" }}-
-            - v1-dependencies-python37-
+            - v2-dependencies-python37-{{ checksum "setup.py" }}-{{ checksum "requirements.txt" }}
+            - v2-dependencies-python37-{{ checksum "setup.py" }}-
+            - v2-dependencies-python37-
 
       - run:
           name: Install Dependencies
@@ -74,7 +74,7 @@ jobs:
       - save_cache:
           paths:
             - ~/venv
-          key: v1-dependencies-python37-{{ checksum "setup.py" }}-{{ checksum "requirements.txt" }}
+          key: v2-dependencies-python37-{{ checksum "setup.py" }}-{{ checksum "requirements.txt" }}
 
       - run:
           name: Run Tests
@@ -103,7 +103,7 @@ jobs:
 
       - restore_cache:
           keys:
-          - v1-publish-dependencies-
+          - v2-publish-dependencies-
 
       - run:
           name: Install Dependencies
@@ -115,7 +115,7 @@ jobs:
       - save_cache:
           paths:
             - ~/venv
-          key: v1-publish-dependencies-
+          key: v2-publish-dependencies-
 
       - run:
           name: Publish to PyPI

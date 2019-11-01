@@ -6,11 +6,11 @@ except ImportError:
 
 install_requires = [
     "argparse",
-    "redis"
+    "redis < 3.0.0",
 ]
 
 setup(name="blueque",
-      version="0.3.1",
+      version="0.3.2",
       description="Simple job queuing for very long tasks",
       url="https://github.com/ustudio/Blueque",
       packages=["blueque"],
