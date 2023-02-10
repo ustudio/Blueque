@@ -1,5 +1,15 @@
+attrs==22.2.0
 entrypoints==0.3
+exceptiongroup==1.1.0
 flake8==3.7.8
+importlib-metadata==6.0.0
+iniconfig==2.0.0
 mccabe==0.6.1
+packaging==23.0
+pluggy==1.0.0
 pycodestyle==2.5.0
 pyflakes==2.1.1
+pytest==7.2.1
+tomli==2.0.1
+typing_extensions==4.4.0
+zipp==3.13.0
