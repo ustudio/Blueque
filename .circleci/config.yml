@@ -36,7 +36,7 @@ jobs:
           name: Run Tests
           command: |
             . ~/venv/bin/activate
-            nosetests --verbose --with-xunit --xunit-file=test-reports/nosetests-python37.xml
+            pytest --verbose --junit-xml=test-reports/pytest-python37.xml
 
       - run:
           name: Run Linter
