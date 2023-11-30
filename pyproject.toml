@@ -9,7 +9,7 @@ packages = [{include = "blueque"}]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-redis = "^2"
+redis = "^5.0.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"
