@@ -262,7 +262,7 @@ class TestRedisQueue(unittest.TestCase):
             "Blueque queue some.queue: deleting task some_task with status failed")
 
     def test_cannot_delete_unfinished_task(self):
-        with self.assertRaisesRegexp(ValueError, "Cannot delete task with status started"):
+        with self.assertRaisesRegex(ValueError, "Cannot delete task with status started"):
             self.queue.delete_task("some_task", "started")
 
     def test_schedule_task(self):

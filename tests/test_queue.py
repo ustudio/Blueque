@@ -64,5 +64,5 @@ class TestQueue(unittest.TestCase):
 
         task = self.client.get_task("some_task")
 
-        with self.assertRaisesRegexp(ValueError, "Task some_task is not in queue some.queue"):
+        with self.assertRaisesRegex(ValueError, "Task some_task is not in queue some.queue"):
             self.queue.delete_task(task)
