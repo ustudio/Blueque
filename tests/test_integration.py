@@ -1,11 +1,12 @@
 import os
 import redis
 import socket
-from unittest import mock, TestCase
+from unittest import mock, skipUnless, TestCase
 
 import blueque
 
 
+@skipUnless("REDIS_URI" in os.environ, "REDIS_URI required to run integration tests.")
 class TestIntegration(TestCase):
     def setUp(self):
         super().setUp()
