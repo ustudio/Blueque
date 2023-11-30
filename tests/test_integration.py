@@ -1,7 +1,7 @@
 import os
 import redis
 import socket
-from unittest import TestCase
+from unittest import mock, TestCase
 
 import blueque
 
@@ -88,3 +88,28 @@ class TestIntegration(TestCase):
 
         self.assertCountEqual(
             [f"{socket.getfqdn()}_{os.getpid()}"], self.producer_queue._redis_queue.get_listeners())
+
+    @mock.patch("time.time")
+    def test_scheduled_tasks_are_enqueued(self, mock_time):
+        mock_time.return_value = 1000
+
+        task_id = self.producer_queue.schedule("PARAMETERS", 1005)
+
+        self.assertEqual("scheduled", self.producer_client.get_task(task_id).status)
+
+        mock_time.return_value = 1004
+
+        self.producer_queue.enqueue_due_tasks()
+
+        self.assertEqual("scheduled", self.producer_client.get_task(task_id).status)
+
+        mock_time.return_value = 1005
+
+        self.producer_queue.enqueue_due_tasks()
+
+        self.assertEqual("pending", self.producer_client.get_task(task_id).status)
+
+        task = self.worker_listener.listen()
+
+        self.assertEqual(task_id, task.id)
+        self.assertEqual("PARAMETERS", task.parameters)
