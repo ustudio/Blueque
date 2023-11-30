@@ -66,3 +66,25 @@ class TestIntegration(TestCase):
         self.assertIsNone(self.producer_client.get_task(task_id).result)
 
         self.producer_queue.delete_task(self.producer_client.get_task(task_id))
+
+    def test_orphaned_task_can_be_claimed(self):
+        task_id = self.producer_queue.enqueue("PARAMETERS")
+
+        pid = os.fork()
+        if pid == 0:
+            listener = self.worker_client.get_listener("QUEUE-NAME")
+            task = listener.listen()
+            processor = self.worker_client.get_processor(task)
+            processor.start(os.getpid())
+            os._exit(0)
+
+        os.waitpid(pid, 0)
+
+        orphaned_task = self.worker_listener.claim_orphan()
+
+        self.assertEqual(task_id, orphaned_task.id)
+        self.assertEqual(f"{socket.getfqdn()}_{pid}", self.producer_client.get_task(task_id).node)
+        self.assertEqual("started", orphaned_task.status)
+
+        self.assertCountEqual(
+            [f"{socket.getfqdn()}_{os.getpid()}"], self.producer_queue._redis_queue.get_listeners())
