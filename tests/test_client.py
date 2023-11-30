@@ -19,8 +19,8 @@ class TestClient(unittest.TestCase):
         mock_redis_class.from_url.assert_called_with("redis://url", decode_responses=True)
 
     @mock.patch("redis.StrictRedis", autospec=True)
-    def test_client_passes_additional_args_to_client(self, mock_redis_class):
-        self.client = Client("redis://url", 4, socket_timeout=5)
+    def test_client_passes_additional_kwargs_to_client(self, mock_redis_class):
+        self.client = Client("redis://url", socket_timeout=5)
 
         mock_redis_class.from_url.assert_called_with(
-            "redis://url", 4, decode_responses=True, socket_timeout=5)
+            "redis://url", decode_responses=True, socket_timeout=5)
