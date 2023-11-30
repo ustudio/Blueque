@@ -76,7 +76,7 @@ class TestIntegration(TestCase):
             listener = self.worker_client.get_listener("QUEUE-NAME")
             task = listener.listen()
             processor = self.worker_client.get_processor(task)
-            processor.start(os.getpid())
+            processor.start(654321)
             os._exit(0)
 
         os.waitpid(pid, 0)
