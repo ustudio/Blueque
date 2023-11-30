@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "blueque"
-version = "0.3.2"
+version = "1.0.0"
 description = "Simple job queueing for very long tasks"
 authors = ["uStudio Developers <dev@ustudio.com>"]
 license = "Apache-2.0"
