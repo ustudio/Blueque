@@ -44,7 +44,7 @@ class RedisQueue(object):
         self._log("adding listener %s" % (node_id))
         with self._redis.pipeline() as pipeline:
             pipeline.sadd(self._listeners_key, node_id)
-            pipeline.zincrby(self._queues_key, self._name, amount=1)
+            pipeline.zincrby(self._queues_key, 1, self._name)
             pipeline.execute()
 
     def remove_listener(self, node_id):
@@ -54,7 +54,7 @@ class RedisQueue(object):
 
         if removed > 0:
             self._log("removed listener")
-            self._redis.zincrby(self._queues_key, self._name, amount=-1)
+            self._redis.zincrby(self._queues_key, -1, self._name)
 
         return removed
 
@@ -78,9 +78,9 @@ class RedisQueue(object):
 
         task_data.update(kwargs)
 
-        pipeline.hmset(RedisTask.task_key(task_id), task_data)
+        pipeline.hset(RedisTask.task_key(task_id), mapping=task_data)
 
-        pipeline.zincrby(self._key("queues"), self._name, amount=0)
+        pipeline.zincrby(self._key("queues"), 0, self._name)
 
         return task_id
 
@@ -91,7 +91,7 @@ class RedisQueue(object):
         with self._redis.pipeline() as pipeline:
             task_id = self._generate_task(pipeline, "scheduled", parameters, eta=eta)
 
-            pipeline.zadd(self._scheduled_key, eta, task_id)
+            pipeline.zadd(self._scheduled_key, {task_id: eta})
 
             pipeline.execute()
 
@@ -124,7 +124,8 @@ class RedisQueue(object):
 
             for task in due_tasks:
                 pipeline.lpush(self._pending_name, task)
-                pipeline.hmset(RedisTask.task_key(task), {"status": "pending", "updated": now})
+                pipeline.hset(
+                    RedisTask.task_key(task), mapping={"status": "pending", "updated": now})
 
         self._redis.transaction(enqueue_transaction, self._scheduled_key)
 
@@ -139,9 +140,9 @@ class RedisQueue(object):
 
         self._log("got task %s" % (task_id))
 
-        self._redis.hmset(
+        self._redis.hset(
             RedisTask.task_key(task_id),
-            {
+            mapping={
                 "status": "reserved",
                 "node": node_id,
                 "updated": time.time()
@@ -153,9 +154,9 @@ class RedisQueue(object):
         self._log("starting task %s on %s, pid %i" % (task_id, node_id, pid))
         with self._redis.pipeline() as pipeline:
             pipeline.sadd(self._started_key, self._running_job(node_id, pid, task_id))
-            pipeline.hmset(
+            pipeline.hset(
                 RedisTask.task_key(task_id),
-                {"status": "started", "pid": pid, "updated": time.time()})
+                mapping={"status": "started", "pid": pid, "updated": time.time()})
 
             pipeline.execute()
 
@@ -175,9 +176,9 @@ class RedisQueue(object):
             pipeline.lrem(self._reserved_key(node_id), 1, task_id)
             pipeline.srem(self._started_key, self._running_job(node_id, pid, task_id))
 
-            pipeline.hmset(
+            pipeline.hset(
                 RedisTask.task_key(task_id),
-                {
+                mapping={
                     "status": "complete",
                     "result": result,
                     "updated": time.time()
@@ -194,9 +195,9 @@ class RedisQueue(object):
             pipeline.lrem(self._reserved_key(node_id), 1, task_id)
             pipeline.srem(self._started_key, self._running_job(node_id, pid, task_id))
 
-            pipeline.hmset(
+            pipeline.hset(
                 RedisTask.task_key(task_id),
-                {
+                mapping={
                     "status": "failed",
                     "error": error,
                     "updated": time.time()

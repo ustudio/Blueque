@@ -1,11 +1,15 @@
-version: 2
+version: 2.1
 jobs:
-  test-python37:
+  test:
+    parameters:
+      python_version:
+        description: "The Python version to use for running the tests"
+        type: string
     docker:
-      - image: cimg/python:3.7
-
-    working_directory: ~/repo
-
+      - image: cimg/python:<< parameters.python_version >>
+      - image: redis:5.0
+    environment:
+      REDIS_URI: redis://localhost:6379/0
     steps:
       - checkout
 
@@ -16,71 +20,81 @@ jobs:
 
       - restore_cache:
           keys:
-            - v2-python-{{ checksum "pythonversion" }}-dependencies-{{ checksum "setup.py" }}-{{ checksum "requirements.txt" }}
+            - v1-python-{{ checksum "pythonversion" }}-dependencies-{{ checksum "poetry.lock" }}
 
       - run:
-          name: Install Dependencies
+          name: install dependencies
           command: |
-            python -m virtualenv ~/venv
-            . ~/venv/bin/activate
-            pip install -e .
-            pip install -r requirements.txt
+            poetry self update --no-ansi -- 1.6.1
+            poetry install --no-ansi
+
             mkdir -p test-reports
 
       - save_cache:
           paths:
-            - ~/venv
-          key: v2-python-{{ checksum "pythonversion" }}-dependencies-{{ checksum "setup.py" }}-{{ checksum "requirements.txt" }}
+            - ~/.cache/pypoetry/virtualenvs
+          key: v1-python-{{ checksum "pythonversion" }}-dependencies-{{ checksum "poetry.lock" }}
 
       - run:
-          name: Run Tests
+          name: run tests
           command: |
-            . ~/venv/bin/activate
-            pytest --verbose --junit-xml=test-reports/pytest-python37.xml
+            poetry run pytest --verbose --junit-xml=test-reports/pytest.xml
 
       - run:
-          name: Run Linter
+          name: run lint
           command: |
-            . ~/venv/bin/activate
-            flake8
+            poetry run flake8 | tee test-reports/flake8-errors
 
       - store_artifacts:
           path: test-reports
+          prefix: python-<< parameters.python_version >>
 
       - store_test_results:
           path: test-reports
+          prefix: python-<< parameters.python_version >>
 
   publish:
     docker:
-      - image: cimg/python:3.7
+      - image: cimg/python:3.11
     working_directory: ~/repo
     steps:
       - checkout
 
       - run:
-          name: Install Dependencies
-          command: |
-            python -m virtualenv ~/venv
-            . ~/venv/bin/activate
-            pip install twine
-
-      - run:
           name: Publish to PyPI
           command: |
-            . ~/venv/bin/activate
-            ./publish_to_pypi.sh
+            export POETRY_HTTP_BASIC_PYPI_USERNAME=$PYPI_USERNAME
+            export POETRY_HTTP_BASIC_PYPI_PASSWORD=$PYPI_PASSWORD
+
+            poetry publish --build
 
 workflows:
   version: 2
-  test-and-publish:
+  test-and-build:
     jobs:
-      - test-python37:
+      - test:
+          name: test-3.9
+          python_version: "3.9"
+          filters:
+            tags:
+              only: /.*/
+      - test:
+          name: test-3.10
+          python_version: "3.10"
+          filters:
+            tags:
+              only: /.*/
+      - test:
+          name: test-3.11
+          python_version: "3.11"
           filters:
             tags:
               only: /.*/
       - publish:
           requires:
-            - test-python37
+            - test-3.9
+            - test-3.10
+            - test-3.11
           filters:
             tags:
               only: /^v[0-9]+(\.[0-9]+)*.*/

@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "blueque"
+version = "1.0.0"
+description = "Simple job queueing for very long tasks"
+authors = ["uStudio Developers <dev@ustudio.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+packages = [{include = "blueque"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+redis = "^5.0.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.3"
+flake8 = "^6.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

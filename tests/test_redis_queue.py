@@ -42,7 +42,7 @@ class TestRedisQueue(unittest.TestCase):
         self.queue.add_listener("some_node")
 
         pipeline.sadd.assert_called_with("blueque_listeners_some.queue", "some_node")
-        pipeline.zincrby.assert_called_with("blueque_queues", "some.queue", amount=1)
+        pipeline.zincrby.assert_called_with("blueque_queues", 1, "some.queue")
 
         pipeline.execute.assert_called_with()
 
@@ -55,7 +55,7 @@ class TestRedisQueue(unittest.TestCase):
 
         self.assertEqual(1, removed, "Returns one removed listener")
 
-        self.mock_redis.zincrby.assert_called_with("blueque_queues", "some.queue", amount=-1)
+        self.mock_redis.zincrby.assert_called_with("blueque_queues", -1, "some.queue")
         self.mock_redis.srem.assert_called_with("blueque_listeners_some.queue", "some_node")
 
         self.log_info.assert_has_calls([
@@ -109,9 +109,9 @@ class TestRedisQueue(unittest.TestCase):
 
         self.assertEqual("12345678-1234-1234-1234-123456781234", task_id)
 
-        pipeline.hmset.assert_called_with(
+        pipeline.hset.assert_called_with(
             "blueque_task_12345678-1234-1234-1234-123456781234",
-            {
+            mapping={
                 "status": "pending",
                 "queue": "some.queue",
                 "parameters": "some parameter",
@@ -119,7 +119,7 @@ class TestRedisQueue(unittest.TestCase):
                 "updated": 12.34
             })
 
-        pipeline.zincrby.assert_called_with("blueque_queues", "some.queue", amount=0)
+        pipeline.zincrby.assert_called_with("blueque_queues", 0, "some.queue")
         pipeline.lpush.assert_called_with(
             "blueque_pending_tasks_some.queue", "12345678-1234-1234-1234-123456781234")
         pipeline.execute.assert_called_with()
@@ -137,8 +137,9 @@ class TestRedisQueue(unittest.TestCase):
 
         self.mock_redis.rpoplpush.assert_called_with(
             "blueque_pending_tasks_some.queue", "blueque_reserved_tasks_some.queue_some_node")
-        self.mock_redis.hmset.assert_called_with(
-            "blueque_task_1234", {"status": "reserved", "node": "some_node", "updated": 12.34})
+        self.mock_redis.hset.assert_called_with(
+            "blueque_task_1234",
+            mapping={"status": "reserved", "node": "some_node", "updated": 12.34})
 
         self.log_debug.assert_has_calls([
             mock.call("Blueque queue some.queue: reserving task on some_node")
@@ -157,7 +158,7 @@ class TestRedisQueue(unittest.TestCase):
 
         self.mock_redis.rpoplpush.assert_called_with(
             "blueque_pending_tasks_some.queue", "blueque_reserved_tasks_some.queue_some_node")
-        self.mock_redis.hmset.assert_has_calls([])
+        self.mock_redis.hset.assert_not_called()
 
         self.log_debug.assert_has_calls([
             mock.call("Blueque queue some.queue: reserving task on some_node")
@@ -173,8 +174,8 @@ class TestRedisQueue(unittest.TestCase):
         pipeline.sadd.assert_called_with(
             "blueque_started_tasks_some.queue", "some_node 4321 some_task")
 
-        pipeline.hmset.assert_called_with(
-            "blueque_task_some_task", {"status": "started", "pid": 4321, "updated": 12.34})
+        pipeline.hset.assert_called_with(
+            "blueque_task_some_task", mapping={"status": "started", "pid": 4321, "updated": 12.34})
 
         pipeline.execute.assert_called_with()
 
@@ -193,9 +194,9 @@ class TestRedisQueue(unittest.TestCase):
         pipeline.srem.assert_called_with(
             "blueque_started_tasks_some.queue", "some_node 1234 some_task")
 
-        pipeline.hmset.assert_called_with(
+        pipeline.hset.assert_called_with(
             "blueque_task_some_task",
-            {
+            mapping={
                 "status": "complete",
                 "result": "a result",
                 "updated": 12.34
@@ -219,9 +220,9 @@ class TestRedisQueue(unittest.TestCase):
         pipeline.srem.assert_called_with(
             "blueque_started_tasks_some.queue", "some_node 1234 some_task")
 
-        pipeline.hmset.assert_called_with(
+        pipeline.hset.assert_called_with(
             "blueque_task_some_task",
-            {
+            mapping={
                 "status": "failed",
                 "error": "error message",
                 "updated": 12.34
@@ -262,7 +263,7 @@ class TestRedisQueue(unittest.TestCase):
             "Blueque queue some.queue: deleting task some_task with status failed")
 
     def test_cannot_delete_unfinished_task(self):
-        with self.assertRaisesRegexp(ValueError, "Cannot delete task with status started"):
+        with self.assertRaisesRegex(ValueError, "Cannot delete task with status started"):
             self.queue.delete_task("some_task", "started")
 
     def test_schedule_task(self):
@@ -272,9 +273,9 @@ class TestRedisQueue(unittest.TestCase):
 
         self.assertEqual("12345678-1234-1234-1234-123456781234", task_id)
 
-        pipeline.hmset.assert_called_with(
+        pipeline.hset.assert_called_with(
             "blueque_task_12345678-1234-1234-1234-123456781234",
-            {
+            mapping={
                 "status": "scheduled",
                 "queue": "some.queue",
                 "parameters": "some parameters",
@@ -284,10 +285,10 @@ class TestRedisQueue(unittest.TestCase):
             }
         )
 
-        pipeline.zincrby.assert_called_with("blueque_queues", "some.queue", amount=0)
+        pipeline.zincrby.assert_called_with("blueque_queues", 0, "some.queue")
 
         pipeline.zadd.assert_called_with(
-            "blueque_scheduled_tasks_some.queue", 13.5, "12345678-1234-1234-1234-123456781234")
+            "blueque_scheduled_tasks_some.queue", {"12345678-1234-1234-1234-123456781234": 13.5})
 
         pipeline.execute.assert_called_with()
 
@@ -335,9 +336,9 @@ class TestRedisQueue(unittest.TestCase):
             mock.call("blueque_pending_tasks_some.queue", "other_task")
         ])
 
-        pipeline.hmset.assert_has_calls([
-            mock.call("blueque_task_some_task", {"status": "pending", "updated": 10}),
-            mock.call("blueque_task_other_task", {"status": "pending", "updated": 10})
+        pipeline.hset.assert_has_calls([
+            mock.call("blueque_task_some_task", mapping={"status": "pending", "updated": 10}),
+            mock.call("blueque_task_other_task", mapping={"status": "pending", "updated": 10})
         ])
 
         self.log_info.assert_called_with(
