@@ -1,4 +1,11 @@
 version: 2.1
+parameters:
+  poetry_version:
+    type: string
+    default: "2.5.1"
+  redis_version:
+    type: string
+    default: "5.0"
 jobs:
   test:
     parameters:
@@ -7,7 +14,7 @@ jobs:
         type: string
     docker:
       - image: cimg/python:<< parameters.python_version >>
-      - image: redis:5.0
+      - image: redis:<< pipeline.parameters.redis_version >>
     environment:
       REDIS_URI: redis://localhost:6379/0
     steps:
@@ -25,7 +32,7 @@ jobs:
       - run:
           name: install dependencies
           command: |
-            poetry self update --no-ansi -- 1.6.1
+            poetry self update --no-ansi -- << pipeline.parameters.poetry_version >>
             poetry install --no-ansi
 
             mkdir -p test-reports
@@ -55,7 +62,7 @@ jobs:
 
   publish:
     docker:
-      - image: cimg/python:3.11
+      - image: cimg/python:3.12
     working_directory: ~/repo
     steps:
       - checkout
