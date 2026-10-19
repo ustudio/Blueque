@@ -14,7 +14,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest (>=7.4.3,<8)",
+    "pytest (>=9.1.1,<10.0.0)",
     "flake8  (>=6.1.0,<7)"
 ]
 
