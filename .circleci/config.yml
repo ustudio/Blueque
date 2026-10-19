@@ -33,7 +33,7 @@ jobs:
           name: install dependencies
           command: |
             poetry self update --no-ansi -- << pipeline.parameters.poetry_version >>
-            poetry install --no-ansi
+            poetry install -E dev --no-ansi
 
             mkdir -p test-reports
 
