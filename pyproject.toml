@@ -15,7 +15,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest (>=9.1.1,<10.0.0)",
-    "flake8  (>=6.1.0,<7)"
+    "flake8 (>=7.4.1,<8.0.0)"
 ]
 
 [tool.poetry]
