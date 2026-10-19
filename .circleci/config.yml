@@ -80,28 +80,42 @@ workflows:
   test-and-build:
     jobs:
       - test:
-          name: test-3.9
-          python_version: "3.9"
-          filters:
-            tags:
-              only: /.*/
-      - test:
-          name: test-3.10
-          python_version: "3.10"
-          filters:
-            tags:
-              only: /.*/
-      - test:
           name: test-3.11
           python_version: "3.11"
           filters:
             tags:
               only: /.*/
+      - test:
+          name: test-3.12
+          python_version: "3.12"
+          filters:
+            tags:
+              only: /.*/
+      - test:
+          name: test-3.13
+          python_version: "3.13"
+          filters:
+            tags:
+              only: /.*/
+      - test:
+          name: test-3.14
+          python_version: "3.14"
+          filters:
+            tags:
+              only: /.*/
+      - test:
+          name: test-3.15
+          python_version: "3.15"
+          filters:
+            tags:
+              only: /.*/
       - publish:
           requires:
-            - test-3.9
-            - test-3.10
             - test-3.11
+            - test-3.12
+            - test-3.13
+            - test-3.14
+            - test-3.15
           filters:
             tags:
               only: /^v[0-9]+(\.[0-9]+)*.*/
