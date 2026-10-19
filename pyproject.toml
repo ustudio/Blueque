@@ -3,7 +3,7 @@ name = "blueque"
 version = "1.0.1"
 description = "Simple job queueing for very long tasks"
 authors = [
-    { name = "uStudio Developers", email = "<dev@ustudio.com>" }
+    { name = "uStudio Developers", email = "dev@ustudio.com" }
 ]
 license = "Apache-2.0"
 readme = "README.md"
